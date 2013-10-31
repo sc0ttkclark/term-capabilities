@@ -7,7 +7,12 @@ require_once 'term-caps-taxonomy.php';
 class TermCapsGroup {
 
 	/**
-	 * @var string $name
+	 * @var string $title Descriptive name
+	 */
+	public $title;
+
+	/**
+	 * @var string $name Slugified title
 	 */
 	public $name;
 
@@ -27,9 +32,32 @@ class TermCapsGroup {
 	public $capabilities = array();
 
 	/**
-	 * @param $name
+	 * @param $title
 	 */
-	public function __construct ( $name ) {
-		$this->name = $name;
+	public function __construct ( $title ) {
+		$this->title = $title;
+		$this->name = sanitize_title( $title );
+	}
+
+	/**
+	 * @param int|null $user_id Omit to check the current user
+	 */
+	public function is_user_covered ( $user_id = null ) {
+
+		if ( null !== $user_id ) {
+			$user = get_userdata( $user_id );
+		}
+		else {
+			$user = wp_get_current_user();
+		}
+
+		if ( !empty( $this->roles ) ) {
+
+		}
+
+		// ToDo: real implementation plz
+
+		// If we make it here then they're not covered
+		return false;
 	}
 }

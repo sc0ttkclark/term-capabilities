@@ -11,7 +11,6 @@ class TermCapsGroups {
 	/**
 	 * @var TermCapsGroup[] $groups
 	 */
-	// ToDo: This should probably be private with getters/setters to provide access, if needed
 	public $groups = array();
 
 	/**
@@ -24,15 +23,8 @@ class TermCapsGroups {
 	 */
 	public function __construct() {
 
-		/**
-		 * ToDo: Perhaps just call load from here?
-		 */
-
-		/**
-		 * ToDo: If we autoload, maybe iterate through groups and check if the curent user is covered now.
-		 * If they are, also store an array of allowed Term IDs and we'll have everything we need to know about
-		 * coverage when we need to check it later.
-		 */
+		$this->load();
+		$this->init_coverage_info();
 	}
 
 	/**
@@ -57,5 +49,22 @@ class TermCapsGroups {
 	 */
 	public function save () {
 		update_option( self::OPTION_NAME, serialize( $this->groups ) );
+	}
+
+	/**
+	 *
+	 */
+	private function init_coverage_info() {
+
+		// Check if the current user is covered under any of the groups
+		foreach ( $this->groups as $this_group ) {
+
+			if ( $this_group->is_user_covered() ) {
+				$this->covered = true;
+
+				// ToDo: Add to the list of allowed terms (IDs) from this group
+			}
+		}
+
 	}
 }
