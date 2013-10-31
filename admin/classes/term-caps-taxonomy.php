@@ -5,9 +5,9 @@
 class TermCapsTaxonomy {
 
 	/**
-	 * @var stdClass $taxonomy
+	 * @var string $taxonomy_name
 	 */
-	public $taxonomy;
+	public $taxonomy_name;
 
 	/**
 	 * @var bool $allow_all_terms
@@ -25,13 +25,13 @@ class TermCapsTaxonomy {
 	public $term_ids;
 
 	/**
-	 * @param string $tax_name
+	 * @param string $taxonomy_name
 	 * @param int[] $term_ids
 	 * @param bool $allow_all_terms
 	 * @param bool $auto_enable_new_terms
 	 */
-	public function __construct ( $tax_name, $term_ids = array(), $allow_all_terms = false, $auto_enable_new_terms = false ) {
-		$this->taxonomy = get_taxonomy( $tax_name );
+	public function __construct ( $taxonomy_name, $term_ids = array(), $allow_all_terms = false, $auto_enable_new_terms = false ) {
+		$this->taxonomy_name = $taxonomy_name;
 		$this->allow_all_terms = $allow_all_terms;
 		$this->auto_enable_new_terms = $auto_enable_new_terms;
 		$this->terms = $term_ids;

@@ -145,6 +145,38 @@ class Term_Capabilities_Admin {
 			array( $this, 'display_plugin_admin_page' )
 		);
 
+		// ToDo: Testing only
+		add_options_page(
+			__( 'PG Test', $this->plugin_slug ),
+			__( 'PG Test', $this->plugin_slug ),
+			'manage_options',
+			'xyzzy',
+			array( $this, 'pg_test' )
+		);
+	}
+
+	// ToDo: Testing only
+	public function pg_test() {
+		require_once( 'classes/term-caps-groups.php' ); // Other dependency classes will get loaded
+
+		$groups = new TermCapsGroups();
+
+		/*
+		// Test creation and save
+		$tax_obj = new TermCapsTaxonomy( 'category', array( 3, 5 ) );
+
+		$new_group = new TermCapsGroup( 'My Group' );
+		$new_group->taxonomies[] = $tax_obj;
+
+		$groups->groups[] = $new_group;
+		$groups->save();
+		*/
+
+
+		// Test load
+		//$groups->load();
+
+		echo "<pre>".print_r($groups, true)."</pre>";
 	}
 
 	/**

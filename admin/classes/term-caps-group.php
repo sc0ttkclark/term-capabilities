@@ -16,9 +16,20 @@ class TermCapsGroup {
 	 */
 	public $taxonomies = array();
 
-	// ToDo: We need details on how we'll store roles and/or caps
+	/**
+	 * @var string[] $roles
+	 */
+	public $roles = array();
 
-	public function __construct( $name ) {
-		$this-> name = $name;
+	/**
+	 * @var string[] $capabilities
+	 */
+	public $capabilities = array();
+
+	/**
+	 * @param $name
+	 */
+	public function __construct ( $name ) {
+		$this->name = $name;
 	}
 }
