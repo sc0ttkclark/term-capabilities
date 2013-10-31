@@ -43,7 +43,7 @@
 						<input type="checkbox" name="groups[]" value="<?php echo esc_attr( $group->name ); ?>" />
 					</th>-->
 					<td>
-						<a href="<?php echo add_query_arg( array( 'group' => $group->name ) ); ?>"><?php echo esc_html( $group->title ); ?></a>
+						<a href="<?php echo add_query_arg( array( 'action' => 'edit', 'group' => $group->name ) ); ?>"><?php echo esc_html( $group->title ); ?></a>
 					</td>
 				</tr>
 			<?php
