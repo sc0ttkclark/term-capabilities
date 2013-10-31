@@ -45,7 +45,7 @@ class Term_Capabilities_Admin {
 	 *
 	 * @since     1.0.0
 	 */
-	private function __construct() {
+	private function __construct () {
 
 		/*
 		 * Call $plugin_slug from public plugin class.
@@ -73,7 +73,7 @@ class Term_Capabilities_Admin {
 	 *
 	 * @return    object    A single instance of this class.
 	 */
-	public static function get_instance() {
+	public static function get_instance () {
 
 		// If the single instance hasn't been set, set it now.
 		if ( null == self::$instance ) {
@@ -90,15 +90,15 @@ class Term_Capabilities_Admin {
 	 *
 	 * @return    null    Return early if no settings page is registered.
 	 */
-	public function enqueue_admin_styles() {
+	public function enqueue_admin_styles () {
 
-		if ( ! isset( $this->plugin_screen_hook_suffix ) ) {
+		if ( !isset( $this->plugin_screen_hook_suffix ) ) {
 			return;
 		}
 
 		$screen = get_current_screen();
 		if ( $this->plugin_screen_hook_suffix == $screen->id ) {
-			wp_enqueue_style( $this->plugin_slug .'-admin-styles', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), Term_Capabilities::VERSION );
+			wp_enqueue_style( $this->plugin_slug . '-admin-styles', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), Term_Capabilities::VERSION );
 		}
 
 	}
@@ -110,9 +110,9 @@ class Term_Capabilities_Admin {
 	 *
 	 * @return    null    Return early if no settings page is registered.
 	 */
-	public function enqueue_admin_scripts() {
+	public function enqueue_admin_scripts () {
 
-		if ( ! isset( $this->plugin_screen_hook_suffix ) ) {
+		if ( !isset( $this->plugin_screen_hook_suffix ) ) {
 			return;
 		}
 
@@ -128,7 +128,7 @@ class Term_Capabilities_Admin {
 	 *
 	 * @since    1.0.0
 	 */
-	public function add_plugin_admin_menu() {
+	public function add_plugin_admin_menu () {
 
 		/*
 		 * Add a settings page for this plugin to the Settings menu.
@@ -156,26 +156,29 @@ class Term_Capabilities_Admin {
 	}
 
 	// ToDo: Testing only
-	public function pg_test() {
+	public function pg_test () {
 		require_once( 'classes/term-caps-groups.php' ); // Other dependency classes will get loaded
 
 		$groups = new TermCapsGroups();
 
 		// Test creation and save
-		$tax_obj = new TermCapsTaxonomy( 'category', array( 3, 5 ) );
+		$tax_obj1 = new TermCapsTaxonomy( 'category', array( 3, 5 ) );
+		$tax_obj2 = new TermCapsTaxonomy( 'my_taxonomy' );
+		$tax_obj2->allow_all_terms = true;
 
 		$new_group = new TermCapsGroup( 'My Group' );
-		$new_group->taxonomies[] = $tax_obj;
+		$new_group->taxonomies[ ] = $tax_obj1;
+		$new_group->taxonomies[ ] = $tax_obj2;
 		$new_group->roles = array( 'administrator', 'subscriber' );
 		$new_group->capabilities = array( 'not_an_existing_cap' );
-		$groups->groups[] = $new_group;
+		$groups->groups[ ] = $new_group;
 
 		$groups->save();
 
 		// Test load
 		$groups->load();
 
-		echo "<pre>".print_r($groups, true)."</pre>";
+		echo "<pre>" . print_r( $groups, true ) . "</pre>";
 	}
 
 	/**
@@ -183,7 +186,7 @@ class Term_Capabilities_Admin {
 	 *
 	 * @since    1.0.0
 	 */
-	public function display_plugin_admin_page() {
+	public function display_plugin_admin_page () {
 		require_once( 'classes/term-caps-groups.php' ); // Other dependency classes will get loaded
 
 		if ( isset( $_GET[ 'action' ] ) && 'add' == $_GET[ 'action' ] ) {
@@ -202,7 +205,7 @@ class Term_Capabilities_Admin {
 	 *
 	 * @since    1.0.0
 	 */
-	public function add_action_links( $links ) {
+	public function add_action_links ( $links ) {
 
 		return array_merge(
 			array(
