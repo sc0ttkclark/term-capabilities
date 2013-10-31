@@ -24,18 +24,9 @@ class TermCapsGroups {
 	private $allowed_terms = array();
 
 	/**
-	 *
-	 */
-	public function __construct() {
-
-		//$this->load();
-		//$this->init_coverage_info();
-	}
-
-	/**
 	 * @return bool Whether or not the current user is covered under any group restriction rules
 	 */
-	public function is_covered() {
+	public function is_covered () {
 		return $this->covered;
 	}
 
@@ -62,17 +53,18 @@ class TermCapsGroups {
 	/**
 	 *
 	 */
-	private function init_coverage_info() {
+	private function init_coverage_info () {
 
 		// Check if the current user is covered under any of the groups
 		foreach ( $this->groups as $this_group ) {
 
+			// Set the global covered flag and add any allowed term ID for each group that covers the user
 			if ( $this_group->is_user_covered() ) {
 				$this->covered = true;
-
-				// ToDo: Add to the list of allowed terms (IDs) from this group
+				foreach ( $this_group->taxonomies as $this_tax_obj ) {
+					$this->allowed_terms = array_unique( array_merge( $this_tax_obj->term_ids, $this->allowed_terms ) );
+				}
 			}
 		}
-
 	}
 }
