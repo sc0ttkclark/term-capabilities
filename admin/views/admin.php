@@ -222,7 +222,7 @@
 			</thead>
 			<tbody>
 				<?php
-					$terms = get_terms( $taxonomy->name );
+					$terms = get_terms( $taxonomy->name, array('hide_empty' => false) );
 
 					foreach ( $terms as $term ) {
 				?>
