@@ -49,12 +49,13 @@
 			<?php
 				}
 			?>
-				<tr>
-					<!--<th scope="row" class="check-column"></th>-->
-					<td>
-						<a href="<?php echo add_query_arg( array( 'action' => 'add' ) ); ?>" class="button button-primary alignright"><?php _e( 'Add New Group', 'term-capabilities' ); ?></a>
-					</td>
-				</tr>
+
+			<tr>
+				<!--<th scope="row" class="check-column"></th>-->
+				<td>
+					<a href="<?php echo add_query_arg( array( 'action' => 'add' ) ); ?>" class="button button-primary alignright"><?php _e( 'Add New Group', 'term-capabilities' ); ?></a>
+				</td>
+			</tr>
 		</tbody>
 	</table>
 

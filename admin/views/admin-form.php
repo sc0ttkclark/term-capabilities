@@ -238,10 +238,14 @@ wp_enqueue_script( 'post', false, array(), false, true );
 					}
 
 					$all_terms = false;
+					$terms = array();
 
 					if ( isset( $group->taxonomies[ $taxonomy->name ] ) ) {
 						$all_terms = $group->taxonomies[ $taxonomy->name ]->allow_all_terms;
+
+						$terms = $group->taxonomies[ $taxonomy->name ]->term_ids;
 					}
+
 			?>
 				<tr valign="top">
 					<th>
@@ -258,7 +262,14 @@ wp_enqueue_script( 'post', false, array(), false, true );
 						<h4><?php echo sprintf( __( 'Allow Specific %s', 'term-capabilities' ), $taxonomy->label ); ?></h4>
 
 						<div class="postbox" id="tagsdiv-<?php echo $taxonomy->name; ?>" style="background:none;border:none;">
-							<?php post_tags_meta_box( (object) array( 'ID' => 0 ), array( 'args' => array( 'taxonomy' => $taxonomy->name ) ) ); ?>
+							<?php
+								ob_start();
+								post_tags_meta_box( (object) array( 'ID' => 0 ), array( 'args' => array( 'taxonomy' => $taxonomy->name ) ) );
+								$metabox = ob_get_clean();
+
+								// Insert our terms
+								$metabox = str_replace( '</textarea>', implode( ',', $terms ) . '</textarea>', $metabox );
+							?>
 						</div>
 					</td>
 				</tr>
