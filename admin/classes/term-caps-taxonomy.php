@@ -1,5 +1,7 @@
 <?php
-
+/**
+ * Class TermCapsTaxonomy
+ */
 class TermCapsTaxonomy {
 
 	/**
@@ -28,7 +30,7 @@ class TermCapsTaxonomy {
 	 * @param bool $allow_all_terms
 	 * @param bool $auto_enable_new_terms
 	 */
-	function __construct ( $tax_name, $term_ids = array(), $allow_all_terms = false, $auto_enable_new_terms = false  ) {
+	public function __construct ( $tax_name, $term_ids = array(), $allow_all_terms = false, $auto_enable_new_terms = false ) {
 		$this->taxonomy = get_taxonomy( $tax_name );
 		$this->allow_all_terms = $allow_all_terms;
 		$this->auto_enable_new_terms = $auto_enable_new_terms;
