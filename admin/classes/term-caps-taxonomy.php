@@ -22,7 +22,7 @@ class TermCapsTaxonomy {
 	/**
 	 * @var int[] $term_ids
 	 */
-	public $term_ids;
+	public $term_ids = array();
 
 	/**
 	 * @param string $taxonomy_name
@@ -34,6 +34,6 @@ class TermCapsTaxonomy {
 		$this->taxonomy_name = $taxonomy_name;
 		$this->allow_all_terms = $allow_all_terms;
 		$this->auto_enable_new_terms = $auto_enable_new_terms;
-		$this->terms = $term_ids;
+		$this->term_ids = (array) $term_ids;
 	}
 }

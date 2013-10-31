@@ -12,7 +12,7 @@ class TermCapsGroup {
 	public $title;
 
 	/**
-	 * @var string $name Slugified title
+	 * @var string $name Slugified identifier
 	 */
 	public $name;
 
@@ -32,11 +32,12 @@ class TermCapsGroup {
 	public $capabilities = array();
 
 	/**
-	 * @param $title
+	 * @param string $title Descriptive tile
+	 * @param string|null $name Slugified identifier (will use sanitized version of $title if omitted)
 	 */
-	public function __construct ( $title ) {
+	public function __construct ( $title, $name = null ) {
 		$this->title = $title;
-		$this->name = sanitize_title( $title );
+		$this->name = ( null !== $name ) ? sanitize_title( $name ) : sanitize_title( $title );
 	}
 
 	/**
@@ -61,7 +62,7 @@ class TermCapsGroup {
 		// Check if they're covered through any capabilities
 		if ( !empty( $this->capabilities ) ) {
 			foreach ( $this->capabilities as $this_capability ) {
-				if (array_key_exists( $this_capability, $target_user->allcaps)) {
+				if ( array_key_exists( $this_capability, $target_user->allcaps ) ) {
 					return true;
 				}
 			}

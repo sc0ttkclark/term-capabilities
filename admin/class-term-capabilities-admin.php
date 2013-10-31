@@ -161,7 +161,6 @@ class Term_Capabilities_Admin {
 
 		$groups = new TermCapsGroups();
 
-		/*
 		// Test creation and save
 		$tax_obj = new TermCapsTaxonomy( 'category', array( 3, 5 ) );
 
@@ -172,10 +171,9 @@ class Term_Capabilities_Admin {
 		$groups->groups[] = $new_group;
 
 		$groups->save();
-		*/
 
 		// Test load
-		//$groups->load();
+		$groups->load();
 
 		echo "<pre>".print_r($groups, true)."</pre>";
 	}
