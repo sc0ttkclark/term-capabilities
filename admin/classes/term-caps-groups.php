@@ -19,12 +19,17 @@ class TermCapsGroups {
 	private $covered = false;
 
 	/**
+	 * @var int[] $allowed_terms Array of term IDs the current user can utilize, if covered
+	 */
+	private $allowed_terms = array();
+
+	/**
 	 *
 	 */
 	public function __construct() {
 
-		$this->load();
-		$this->init_coverage_info();
+		//$this->load();
+		//$this->init_coverage_info();
 	}
 
 	/**
@@ -42,6 +47,9 @@ class TermCapsGroups {
 		if ( false !== $groups ) {
 			$this->groups = unserialize( $groups );
 		}
+
+		// Store all the coverage information now that
+		$this->init_coverage_info();
 	}
 
 	/**

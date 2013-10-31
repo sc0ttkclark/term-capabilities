@@ -40,22 +40,32 @@ class TermCapsGroup {
 	}
 
 	/**
-	 * @param int|null $user_id Omit to check the current user
+	 * @param int|null $target_user_id Omit to check the current user
+	 *
+	 * @return bool
 	 */
-	public function is_user_covered ( $user_id = null ) {
+	public function is_user_covered ( $target_user_id = null ) {
 
-		if ( null !== $user_id ) {
-			$user = get_userdata( $user_id );
-		}
-		else {
-			$user = wp_get_current_user();
-		}
+		// Get the specified user, or the current user if omitted
+		$target_user = ( null !== $target_user_id ) ? get_userdata( $target_user_id ) : wp_get_current_user();
 
+		// Check if they're covered through any roles
 		if ( !empty( $this->roles ) ) {
-
+			foreach ( $this->roles as $this_role ) {
+				if ( in_array( $this_role, (array) $target_user->roles ) ) {
+					return true;
+				}
+			}
 		}
 
-		// ToDo: real implementation plz
+		// Check if they're covered through any capabilities
+		if ( !empty( $this->capabilities ) ) {
+			foreach ( $this->capabilities as $this_capability ) {
+				if (array_key_exists( $this_capability, $target_user->allcaps)) {
+					return true;
+				}
+			}
+		}
 
 		// If we make it here then they're not covered
 		return false;

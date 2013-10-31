@@ -167,11 +167,12 @@ class Term_Capabilities_Admin {
 
 		$new_group = new TermCapsGroup( 'My Group' );
 		$new_group->taxonomies[] = $tax_obj;
-
+		$new_group->roles = array( 'administrator', 'subscriber' );
+		$new_group->capabilities = array( 'not_an_existing_cap' );
 		$groups->groups[] = $new_group;
+
 		$groups->save();
 		*/
-
 
 		// Test load
 		//$groups->load();
