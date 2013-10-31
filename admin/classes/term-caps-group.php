@@ -7,12 +7,12 @@ require_once 'term-caps-taxonomy.php';
 class TermCapsGroup {
 
 	/**
-	 * @var string $title
+	 * @var string $title Descriptive name
 	 */
 	public $title;
 
 	/**
-	 * @var string $name
+	 * @var string $name Slugified title
 	 */
 	public $name;
 
@@ -32,9 +32,42 @@ class TermCapsGroup {
 	public $capabilities = array();
 
 	/**
-	 * @param $name
+	 * @param $title
 	 */
-	public function __construct ( $name ) {
-		$this->name = $name;
+	public function __construct ( $title ) {
+		$this->title = $title;
+		$this->name = sanitize_title( $title );
+	}
+
+	/**
+	 * @param int|null $target_user_id Omit to check the current user
+	 *
+	 * @return bool
+	 */
+	public function is_user_covered ( $target_user_id = null ) {
+
+		// Get the specified user, or the current user if omitted
+		$target_user = ( null !== $target_user_id ) ? get_userdata( $target_user_id ) : wp_get_current_user();
+
+		// Check if they're covered through any roles
+		if ( !empty( $this->roles ) ) {
+			foreach ( $this->roles as $this_role ) {
+				if ( in_array( $this_role, (array) $target_user->roles ) ) {
+					return true;
+				}
+			}
+		}
+
+		// Check if they're covered through any capabilities
+		if ( !empty( $this->capabilities ) ) {
+			foreach ( $this->capabilities as $this_capability ) {
+				if (array_key_exists( $this_capability, $target_user->allcaps)) {
+					return true;
+				}
+			}
+		}
+
+		// If we make it here then they're not covered
+		return false;
 	}
 }
