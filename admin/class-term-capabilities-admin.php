@@ -186,7 +186,17 @@ class Term_Capabilities_Admin {
 	 * @since    1.0.0
 	 */
 	public function display_plugin_admin_page() {
-		include_once( 'views/admin.php' );
+		require_once( 'classes/term-caps-groups.php' ); // Other dependency classes will get loaded
+
+		if ( isset( $_GET[ 'action' ] ) && 'add' == $_GET[ 'action' ] ) {
+			include_once( 'views/admin-add.php' );
+		}
+		elseif ( isset( $_GET[ 'action' ] ) && 'edit' == $_GET[ 'action' ] && isset( $_GET[ 'group' ] ) && !empty( $_GET[ 'group' ] ) ) {
+			include_once( 'views/admin-edit.php' );
+		}
+		else {
+			include_once( 'views/admin.php' );
+		}
 	}
 
 	/**
