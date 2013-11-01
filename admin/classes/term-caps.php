@@ -11,6 +11,8 @@ class TermCaps {
 	 */
 	const OPTION_NAME = 'term_caps_groups';
 
+	public static $IGNORED_TAXONOMIES = array( 'post_format', 'nav_menu', 'link_category' );
+
 	/**
 	 * @var TermCapsGroup[] $groups
 	 */
@@ -41,7 +43,7 @@ class TermCaps {
 		}
 
 		// Add the new group object and return it
-		$this->groups[] = $new_group;
+		$this->groups[ ] = $new_group;
 		return $new_group;
 	}
 
@@ -50,7 +52,7 @@ class TermCaps {
 	 *
 	 * @return null|TermCapsGroup A TermCapsGroup object or null if not found
 	 */
-	public function get_group( $target_name ) {
+	public function get_group ( $target_name ) {
 
 		foreach ( $this->groups as $this_group ) {
 			if ( $target_name == $this_group->name ) {
@@ -68,9 +70,31 @@ class TermCaps {
 	 * @param string $name
 	 */
 	public function remove_group ( $name ) {
-		if ( isset( $this->groups[ $name ] ) ) {
-			unset( $this->groups[ $name ] );
+
+		for ( $i = 0; $i < count( $this->groups ); $i++ ) {
+			if ( $this->groups[ $i ]->name == $name ) {
+				array_splice( $this->groups, $i, 1 );
+			}
 		}
+	}
+
+	/**
+	 * @return string[] Array of all allowed taxonomies across all groups
+	 */
+	public function get_managed_taxonomies () {
+		$managed_taxonomies = array();
+
+		foreach ( $this->groups as $this_group ) {
+
+			// Is the current user covered under this group?
+			if ( $this_group->is_user_covered() ) {
+				foreach ( $this_group->taxonomies as $this_tax ) {
+					$managed_taxonomies[ ] = $this_tax->taxonomy_name;
+				}
+			}
+		}
+
+		return array_unique( $managed_taxonomies );
 	}
 
 	/**
@@ -118,7 +142,7 @@ class TermCaps {
 
 				// Add all allowed term IDs for this group
 				foreach ( $this_group->taxonomies as $this_tax_obj ) {
-					$this->allowed_terms = array_merge($this->allowed_terms, $this_tax_obj->get_allowed_term_ids());
+					$this->allowed_terms = array_merge( $this->allowed_terms, $this_tax_obj->get_allowed_term_ids() );
 				}
 			}
 		}
