@@ -166,12 +166,16 @@ class Term_Capabilities_Admin {
 		$tax_obj2 = new TermCapsTaxonomy( 'my_taxonomy' );
 		$tax_obj2->allow_all_terms = true;
 
-		$new_group = new TermCapsGroup( 'My Group' );
+		$dummy_group = $groups->add_group( 'dummy group' );
+		$groups->remove_group( 'dummy-group' );
+
+		$new_group = $groups->add_group( 'My Group' );
+
+		// The new instance variable still points to the internally stored group, so we can modify it
 		$new_group->taxonomies[ ] = $tax_obj1;
 		$new_group->taxonomies[ ] = $tax_obj2;
 		$new_group->roles = array( 'administrator', 'subscriber' );
 		$new_group->capabilities = array( 'not_an_existing_cap' );
-		$groups->groups[ ] = $new_group;
 
 		$groups->save();
 
