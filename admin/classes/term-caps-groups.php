@@ -96,24 +96,7 @@ class TermCapsGroups {
 
 				// Add all allowed term IDs for this group
 				foreach ( $this_group->taxonomies as $this_tax_obj ) {
-
-					// If allow_all_terms is cleared then we add from the term_ids array
-					if ( !$this_tax_obj->allow_all_terms ) {
-						$this->allowed_terms = array_merge( $this_tax_obj->term_ids, $this->allowed_terms );
-					}
-					// All terms in the taxonomy are allowed
-					else {
-						$all_terms = get_terms( $this_tax_obj->taxonomy_name, array( 'hide_empty' => false ) );
-
-						// ToDo: We should consider some logging if the tax name wasn't found
-						if ( is_array( $all_terms ) ) {
-
-							// Add each term ID from the taxonomy
-							foreach ( $all_terms as $this_term ) {
-								$this->allowed_terms[ ] = $this_term->term_id;
-							}
-						}
-					}
+					$this->allowed_terms = array_merge($this->allowed_terms, $this_tax_obj->get_allowed_term_ids());
 				}
 			}
 		}

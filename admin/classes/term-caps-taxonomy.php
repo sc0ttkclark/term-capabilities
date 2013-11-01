@@ -36,4 +36,29 @@ class TermCapsTaxonomy {
 		$this->auto_enable_new_terms = $auto_enable_new_terms;
 		$this->term_ids = (array) $term_ids;
 	}
+
+	/**
+	 * @return int[] Array of allowed term IDs for this taxonomy
+	 */
+	public function get_allowed_term_ids () {
+
+		// Default to the term ID array
+		$allowed_term_ids = $this->term_ids;
+
+		if ( $this->allow_all_terms ) {
+			$allowed_term_ids = array();
+			$all_terms = get_terms( $this->taxonomy_name, array( 'hide_empty' => false ) );
+
+			// ToDo: We should consider some logging if the tax name wasn't found
+			if ( is_array( $all_terms ) ) {
+
+				// Add each term ID from the taxonomy
+				foreach ( $all_terms as $this_term ) {
+					$allowed_term_ids[ ] = $this_term->term_id;
+				}
+			}
+		}
+
+		return $allowed_term_ids;
+	}
 }
