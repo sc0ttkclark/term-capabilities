@@ -11,11 +11,11 @@
  * @link      https://github.com/sc0ttkclark/term-capabilities
  * @copyright 2013 Scott Kingsley Clark, Phil Lewis
  */
-
-if ( isset( $groups->groups[ $_GET[ 'group' ] ] ) ) {
-	$group =& $groups->groups[ $_GET[ 'group' ] ];
-}
-else {
+/**
+ * @var TermCaps $termcaps
+ */
+$group = $termcaps->get_group( $_GET[ 'group' ] );
+if ( empty( $group ) ) {
 	include_once 'admin-add.php';
 	return;
 }

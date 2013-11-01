@@ -1,5 +1,5 @@
 <?php
-require_once( 'classes/term-caps-groups.php' ); // Other dependency classes will get loaded
+require_once( 'classes/term-caps.php' ); // Other dependency classes will get loaded
 
 /**
  * Plugin Name.
@@ -42,9 +42,9 @@ class Term_Capabilities_Admin {
 	protected $plugin_screen_hook_suffix = null;
 
 	/**
-	 * @var TermCapsGroups $groups_obj
+	 * @var TermCaps $termcaps
 	 */
-	private $groups_obj = null;
+	private $termcaps = null;
 
 	/**
 	 * Initialize the plugin by loading admin scripts & styles and adding a
@@ -85,8 +85,8 @@ class Term_Capabilities_Admin {
 	 *
 	 */
 	public function init_groups () {
-		$this->groups_obj = new TermCapsGroups();
-		$this->groups_obj->load();
+		$this->termcaps = new TermCaps();
+		$this->termcaps->load();
 	}
 
 	/**
@@ -178,7 +178,7 @@ class Term_Capabilities_Admin {
 
 	// ToDo: Testing only
 	public function pg_test () {
-		echo "<pre>" . print_r( $this->groups_obj, true ) . "</pre>";
+		echo "<pre>" . print_r( $this->termcaps, true ) . "</pre>";
 	}
 
 	/**
@@ -186,153 +186,175 @@ class Term_Capabilities_Admin {
 	 */
 	public function process_plugin_admin_post () {
 
-		if ( isset( $_GET[ 'page' ] ) && $this->plugin_slug == $_GET[ 'page' ] && isset( $_GET[ 'action' ] ) ) {
-			if ( !empty( $_POST ) && 'add' == $_GET[ 'action' ] ) {
-				$postdata = wp_unslash( $_POST );
+		// Bail if needed
+		if ( !isset( $_GET[ 'page' ] ) || $this->plugin_slug != $_GET[ 'page' ] || !isset( $_GET[ 'action' ] ) ) {
+			return;
+		}
 
-				$new_group = $this->groups_obj->add_group( $postdata[ 'term_caps_title' ], $postdata[ 'term_caps_name' ] );
+		if ( !empty( $_POST ) && 'add' == $_GET[ 'action' ] ) {
+			$this->add_group();
+		}
+		elseif ( !empty( $_POST ) && 'edit' == $_GET[ 'action' ] && isset( $_GET[ 'group' ] ) && !empty( $_GET[ 'group' ] ) ) {
+			$this->edit_group();
+		}
+		elseif ( 'delete' == $_GET[ 'action' ] && isset( $_GET[ 'group' ] ) && !empty( $_GET[ 'group' ] ) ) {
+			$this->delete_group();
+		}
+	}
 
-				if ( isset( $postdata[ 'term_caps_roles' ] ) ) {
-					$new_group->roles = (array) $postdata[ 'term_caps_roles' ];
-				}
+	/**
+	 *
+	 */
+	public function add_group() {
+		$postdata = wp_unslash( $_POST );
 
-				if ( isset( $postdata[ 'term_caps_capabilities' ] ) ) {
-					$new_group->capabilities = (array) $postdata[ 'term_caps_capabilities' ];
-				}
+		$new_group = $this->termcaps->add_group( $postdata[ 'term_caps_title' ], $postdata[ 'term_caps_name' ] );
 
-				$taxonomies = get_taxonomies( array(), 'objects' );
+		if ( isset( $postdata[ 'term_caps_roles' ] ) ) {
+			$new_group->roles = (array) $postdata[ 'term_caps_roles' ];
+		}
 
-				foreach ( $taxonomies as $taxonomy ) {
-					if ( in_array( $taxonomy->name, array( 'post_format', 'nav_menu', 'link_category' ) ) ) {
-						continue;
-					}
+		if ( isset( $postdata[ 'term_caps_capabilities' ] ) ) {
+			$new_group->capabilities = (array) $postdata[ 'term_caps_capabilities' ];
+		}
 
-					$all_terms = false;
-					$terms = array();
+		$taxonomies = get_taxonomies( array(), 'objects' );
 
-					if ( isset( $postdata[ 'term_caps_all_' . $taxonomy->name ] ) && 1 == $postdata[ 'term_caps_all_' . $taxonomy->name ] ) {
-						$all_terms = true;
-					}
-					elseif ( isset( $postdata[ 'tax_input' ] ) && is_array( $postdata[ 'tax_input' ] ) && isset( $postdata[ 'tax_input' ][ $taxonomy->name ] ) && !empty( $postdata[ 'tax_input' ][ $taxonomy->name ] ) ) {
-						$terms = (array) $postdata[ 'tax_input' ][ $taxonomy->name ];
-
-						foreach ( $terms as $k => $term_name ) {
-							$term = get_term_by( 'name', $term_name, $taxonomy->name );
-
-							if ( !empty( $term ) ) {
-								$terms[ $k ] = $term->term_id;
-							}
-							else {
-								unset( $terms[ $k ] );
-							}
-						}
-
-						$terms = array_values( $terms );
-					}
-
-					if ( !empty( $terms ) || $all_terms ) {
-						$new_group->taxonomies[ $taxonomy->name ] = new TermCapsTaxonomy( $taxonomy->name, $terms, $all_terms );
-					}
-					elseif ( isset( $new_group->taxonomies[ $taxonomy->name ] ) ) {
-						unset( $new_group->taxonomies[ $taxonomy->name ] );
-					}
-				}
-
-				$this->groups_obj->save();
-
-				wp_redirect( add_query_arg( array(
-					'action' => 'edit',
-					'group' => $new_group->name,
-					'message' => 'added'
-				) ) );
-				die();
+		foreach ( $taxonomies as $taxonomy ) {
+			if ( in_array( $taxonomy->name, array( 'post_format', 'nav_menu', 'link_category' ) ) ) {
+				continue;
 			}
-			elseif ( !empty( $_POST ) && 'edit' == $_GET[ 'action' ] && isset( $_GET[ 'group' ] ) && !empty( $_GET[ 'group' ] ) ) {
-				$postdata = wp_unslash( $_POST );
 
-				if ( isset( $this->groups_obj->groups[ $_GET[ 'group' ] ] ) ) {
-					$group = $this->groups_obj->groups[ $_GET[ 'group' ] ];
+			$all_terms = false;
+			$terms = array();
 
-					$group->title = $postdata[ 'term_caps_title' ];
+			if ( isset( $postdata[ 'term_caps_all_' . $taxonomy->name ] ) && 1 == $postdata[ 'term_caps_all_' . $taxonomy->name ] ) {
+				$all_terms = true;
+			}
+			elseif ( isset( $postdata[ 'tax_input' ] ) && is_array( $postdata[ 'tax_input' ] ) && isset( $postdata[ 'tax_input' ][ $taxonomy->name ] ) && !empty( $postdata[ 'tax_input' ][ $taxonomy->name ] ) ) {
+				$terms = (array) $postdata[ 'tax_input' ][ $taxonomy->name ];
 
-					if ( !empty( $postdata[ 'term_caps_name' ] ) ) {
-						$group->name = sanitize_title( $postdata[ 'term_caps_name' ] );
+				foreach ( $terms as $k => $term_name ) {
+					$term = get_term_by( 'name', $term_name, $taxonomy->name );
+
+					if ( !empty( $term ) ) {
+						$terms[ $k ] = $term->term_id;
 					}
 					else {
-						$group->name = sanitize_title( $group->title );
-					}
-				}
-				else {
-					$group = $this->groups_obj->add_group( $postdata[ 'term_caps_title' ], $postdata[ 'term_caps_name' ] );
-				}
-
-				if ( isset( $postdata[ 'term_caps_roles' ] ) ) {
-					$group->roles = (array) $postdata[ 'term_caps_roles' ];
-				}
-
-				if ( isset( $postdata[ 'term_caps_capabilities' ] ) ) {
-					$group->capabilities = (array) $postdata[ 'term_caps_capabilities' ];
-				}
-
-				$taxonomies = get_taxonomies( array(), 'objects' );
-
-				foreach ( $taxonomies as $taxonomy ) {
-					if ( in_array( $taxonomy->name, array( 'post_format', 'nav_menu', 'link_category' ) ) ) {
-						continue;
-					}
-
-					$all_terms = false;
-					$terms = array();
-
-					if ( isset( $postdata[ 'term_caps_all_' . $taxonomy->name ] ) && 1 == $postdata[ 'term_caps_all_' . $taxonomy->name ] ) {
-						$all_terms = true;
-					}
-					elseif ( isset( $postdata[ 'tax_input' ] ) && is_array( $postdata[ 'tax_input' ] ) && isset( $postdata[ 'tax_input' ][ $taxonomy->name ] ) && !empty( $postdata[ 'tax_input' ][ $taxonomy->name ] ) ) {
-						$terms = (array) $postdata[ 'tax_input' ][ $taxonomy->name ];
-
-						foreach ( $terms as $k => $term_name ) {
-							$term = get_term_by( 'name', $term_name, $taxonomy->name );
-
-							if ( !empty( $term ) ) {
-								$terms[ $k ] = $term->term_id;
-							}
-							else {
-								unset( $terms[ $k ] );
-							}
-						}
-
-						$terms = array_values( $terms );
-					}
-
-					if ( !empty( $terms ) || $all_terms ) {
-						$group->taxonomies[ $taxonomy->name ] = new TermCapsTaxonomy( $taxonomy->name, $terms, $all_terms );
-					}
-					elseif ( isset( $group->taxonomies[ $taxonomy->name ] ) ) {
-						unset( $group->taxonomies[ $taxonomy->name ] );
+						unset( $terms[ $k ] );
 					}
 				}
 
-				$this->groups_obj->save();
-
-				wp_redirect( add_query_arg( array(
-					'action' => 'edit',
-					'group' => $group->name,
-					'message' => 'saved'
-				) ) );
-				die();
+				$terms = array_values( $terms );
 			}
-			elseif ( 'delete' == $_GET[ 'action' ] && isset( $_GET[ 'group' ] ) && !empty( $_GET[ 'group' ] ) ) {
-				if ( isset( $this->groups_obj->groups[ $_GET[ 'group' ] ] ) ) {
-					unset( $this->groups_obj->groups[ $_GET[ 'group' ] ] );
-				}
 
-				$this->groups_obj->save();
-
-				wp_redirect( add_query_arg( array( 'action' => false, 'group' => false, 'message' => 'deleted' ) ) );
-				die();
+			if ( !empty( $terms ) || $all_terms ) {
+				$new_group->taxonomies[ $taxonomy->name ] = new TermCapsTaxonomy( $taxonomy->name, $terms, $all_terms );
+			}
+			elseif ( isset( $new_group->taxonomies[ $taxonomy->name ] ) ) {
+				unset( $new_group->taxonomies[ $taxonomy->name ] );
 			}
 		}
 
+		$this->termcaps->save();
+
+		wp_redirect( add_query_arg( array(
+			'action' => 'edit',
+			'group' => $new_group->name,
+			'message' => 'added'
+		) ) );
+		die();
+	}
+
+	/**
+	 *
+	 */
+	public function edit_group() {
+		$postdata = wp_unslash( $_POST );
+
+		$group = $this->termcaps->get_group( $_GET[ 'group' ] );
+		if ( !empty( $group ) ) {
+			$group->title = $postdata[ 'term_caps_title' ];
+
+			if ( !empty( $postdata[ 'term_caps_name' ] ) ) {
+				$group->name = sanitize_title( $postdata[ 'term_caps_name' ] );
+			}
+			else {
+				$group->name = sanitize_title( $group->title );
+			}
+		}
+		else {
+			$group = $this->termcaps->add_group( $postdata[ 'term_caps_title' ], $postdata[ 'term_caps_name' ] );
+		}
+
+		if ( isset( $postdata[ 'term_caps_roles' ] ) ) {
+			$group->roles = (array) $postdata[ 'term_caps_roles' ];
+		}
+
+		if ( isset( $postdata[ 'term_caps_capabilities' ] ) ) {
+			$group->capabilities = (array) $postdata[ 'term_caps_capabilities' ];
+		}
+
+		$taxonomies = get_taxonomies( array(), 'objects' );
+
+		foreach ( $taxonomies as $taxonomy ) {
+			if ( in_array( $taxonomy->name, array( 'post_format', 'nav_menu', 'link_category' ) ) ) {
+				continue;
+			}
+
+			$all_terms = false;
+			$terms = array();
+
+			if ( isset( $postdata[ 'term_caps_all_' . $taxonomy->name ] ) && 1 == $postdata[ 'term_caps_all_' . $taxonomy->name ] ) {
+				$all_terms = true;
+			}
+			elseif ( isset( $postdata[ 'tax_input' ] ) && is_array( $postdata[ 'tax_input' ] ) && isset( $postdata[ 'tax_input' ][ $taxonomy->name ] ) && !empty( $postdata[ 'tax_input' ][ $taxonomy->name ] ) ) {
+				$terms = (array) $postdata[ 'tax_input' ][ $taxonomy->name ];
+
+				foreach ( $terms as $k => $term_name ) {
+					$term = get_term_by( 'name', $term_name, $taxonomy->name );
+
+					if ( !empty( $term ) ) {
+						$terms[ $k ] = $term->term_id;
+					}
+					else {
+						unset( $terms[ $k ] );
+					}
+				}
+
+				$terms = array_values( $terms );
+			}
+
+			if ( !empty( $terms ) || $all_terms ) {
+				$group->taxonomies[ $taxonomy->name ] = new TermCapsTaxonomy( $taxonomy->name, $terms, $all_terms );
+			}
+			elseif ( isset( $group->taxonomies[ $taxonomy->name ] ) ) {
+				unset( $group->taxonomies[ $taxonomy->name ] );
+			}
+		}
+
+		$this->termcaps->save();
+
+		wp_redirect( add_query_arg( array(
+			'action' => 'edit',
+			'group' => $group->name,
+			'message' => 'saved'
+		) ) );
+		die();
+	}
+
+	/**
+	 *
+	 */
+	public function delete_group() {
+		if ( isset( $this->termcaps->groups[ $_GET[ 'group' ] ] ) ) {
+			unset( $this->termcaps->groups[ $_GET[ 'group' ] ] );
+		}
+
+		$this->termcaps->save();
+
+		wp_redirect( add_query_arg( array( 'action' => false, 'group' => false, 'message' => 'deleted' ) ) );
+		die();
 	}
 
 	/**
@@ -341,7 +363,7 @@ class Term_Capabilities_Admin {
 	 * @since    1.0.0
 	 */
 	public function display_plugin_admin_page () {
-		$groups = $this->groups_obj;
+		$termcaps = $this->termcaps;
 
 		if ( isset( $_GET[ 'action' ] ) && 'add' == $_GET[ 'action' ] ) {
 			include_once( 'views/admin-add.php' );
@@ -367,7 +389,6 @@ class Term_Capabilities_Admin {
 			),
 			$links
 		);
-
 	}
 
 	/**
@@ -377,7 +398,7 @@ class Term_Capabilities_Admin {
 	public function add_meta_boxes ( $post_type, $post ) {
 
 		// Nothing to do if the current user isn't covered
-		if ( !$this->groups_obj->is_current_user_covered() ) {
+		if ( !$this->termcaps->is_current_user_covered() ) {
 			return;
 		}
 
@@ -403,7 +424,7 @@ class Term_Capabilities_Admin {
 
 			// Build the list of allowed terms for this taxonomy
 			$allowed_tax_terms = array();
-			foreach ( $this->groups_obj->allowed_terms as $this_term_id ) {
+			foreach ( $this->termcaps->allowed_terms as $this_term_id ) {
 
 				// Is this allowed term in the target category?
 				$term_info = get_term_by( 'id', $this_term_id, $tax_name );
@@ -414,7 +435,10 @@ class Term_Capabilities_Admin {
 
 			// Insert our own metabox if there are allowable terms for this taxonomy
 			if ( count( $allowed_tax_terms ) > 0 ) {
-				add_meta_box( $new_tax_meta_box_id, $label, array( $this, 'term_caps_render_meta_box' ), null, 'side', 'core', array( 'allowed_tax_terms' => $allowed_tax_terms ) );
+				add_meta_box( $new_tax_meta_box_id, $label, array(
+					$this,
+					'term_caps_render_meta_box'
+				), null, 'side', 'core', array( 'allowed_tax_terms' => $allowed_tax_terms ) );
 			}
 		}
 	}

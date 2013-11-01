@@ -34,7 +34,10 @@
 		</thead>
 		<tbody>
 			<?php
-				foreach ( $groups->groups as $group ) {
+			/**
+			 * @var TermCaps $termcaps
+			 */
+			foreach ( $termcaps->groups as $group ) {
 			?>
 				<tr>
 					<!--<th scope="row" class="check-column">

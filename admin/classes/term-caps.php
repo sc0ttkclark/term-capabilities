@@ -2,9 +2,9 @@
 require_once 'term-caps-group.php';
 
 /**
- * Class TermCapsGroups
+ * Class TermCaps
  */
-class TermCapsGroups {
+class TermCaps {
 
 	/**
 	 * Option name for saving the groups
@@ -30,15 +30,36 @@ class TermCapsGroups {
 	 * @param string $title Descriptive tile
 	 * @param string|null $name Slugified identifier (will use sanitized version of $title if omitted)
 	 *
-	 * @return TermCapsGroup Newly created group object
+	 * @return TermCapsGroup|null Newly created group object
 	 */
 	public function add_group ( $title, $name = null ) {
+
+		// No duplicates
 		$new_group = new TermCapsGroup( $title, $name );
+		if ( $this->get_group( $new_group->name ) ) {
+			return null;
+		}
 
-		// ToDo: We need to make sure the name is unique
-		$this->groups[ $new_group->name ] = $new_group;
-
+		// Add the new group object and return it
+		$this->groups[] = $new_group;
 		return $new_group;
+	}
+
+	/**
+	 * @param string $target_name
+	 *
+	 * @return null|TermCapsGroup A TermCapsGroup object or null if not found
+	 */
+	public function get_group( $target_name ) {
+
+		foreach ( $this->groups as $this_group ) {
+			if ( $target_name == $this_group->name ) {
+				return $this_group;
+			}
+		}
+
+		// Didn't find the target name
+		return null;
 	}
 
 	/**
