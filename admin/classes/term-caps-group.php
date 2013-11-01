@@ -37,7 +37,7 @@ class TermCapsGroup {
 	 */
 	public function __construct ( $title, $name = null ) {
 		$this->title = $title;
-		$this->name = ( null !== $name ) ? sanitize_title( $name ) : sanitize_title( $title );
+		$this->name = ( !empty( $name ) ) ? sanitize_title( $name ) : sanitize_title( $title );
 	}
 
 	/**

@@ -36,7 +36,7 @@ class TermCapsGroups {
 		$new_group = new TermCapsGroup( $title, $name );
 
 		// ToDo: We need to make sure the name is unique
-		$this->groups[ $new_group->name ] =& $new_group;
+		$this->groups[ $new_group->name ] = $new_group;
 
 		return $new_group;
 	}
