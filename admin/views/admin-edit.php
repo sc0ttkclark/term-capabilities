@@ -12,7 +12,13 @@
  * @copyright 2013 Scott Kingsley Clark, Phil Lewis
  */
 
-$group = new TermCapsGroup( $_GET[ 'group' ] );
+if ( isset( $groups->groups[ $_GET[ 'group' ] ] ) ) {
+	$group =& $groups->groups[ $_GET[ 'group' ] ];
+}
+else {
+	include_once 'admin-add.php';
+	return;
+}
 ?>
 
 <div class="wrap">

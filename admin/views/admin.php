@@ -34,8 +34,6 @@
 		</thead>
 		<tbody>
 			<?php
-				$groups = new TermCapsGroups;
-
 				foreach ( $groups->groups as $group ) {
 			?>
 				<tr>
@@ -43,7 +41,16 @@
 						<input type="checkbox" name="groups[]" value="<?php echo esc_attr( $group->name ); ?>" />
 					</th>-->
 					<td>
-						<a href="<?php echo add_query_arg( array( 'action' => 'edit', 'group' => $group->name ) ); ?>"><?php echo esc_html( $group->title ); ?></a>
+						<strong>
+							<a href="<?php echo add_query_arg( array( 'action' => 'edit', 'group' => $group->name ) ); ?>">
+								<?php echo esc_html( $group->title ); ?>
+							</a>
+						</strong>
+
+						<div class="row-actions">
+							<span class="edit"><a href="<?php echo add_query_arg( array( 'action' => 'edit', 'group' => $group->name ) ); ?>" title="<?php esc_attr_e( 'Edit this item' ); ?>"><?php _e( 'Edit' ); ?></a> | </span>
+							<span class="delete"><a href="<?php echo add_query_arg( array( 'action' => 'delete', 'group' => $group->name ) ); ?>" title="<?php esc_attr_e( 'Delete this item' ); ?>"><?php _e( 'Delete' ); ?></a></span>
+						</div>
 					</td>
 				</tr>
 			<?php

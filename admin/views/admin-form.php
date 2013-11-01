@@ -68,7 +68,7 @@ wp_enqueue_script( 'post', false, array(), false, true );
 							<tr>
 								<th scope="col" id="cb" class="manage-column column-cb check-column">
 									<label class="screen-reader-text" for="cb-select-all-1"><?php _e( 'Select All' ); ?></label>
-									<input id="cb-select-all-1" type="checkbox" name="all_roles" value="1" />
+									<input id="cb-select-all-1" type="checkbox" name="term_caps_all_roles" value="1" />
 								</th>
 								<th scope="col" id="title" class="manage-column column-title" style="padding:0;vertical-align:middle;">
 									<label for="cb-select-all-1">
@@ -85,7 +85,7 @@ wp_enqueue_script( 'post', false, array(), false, true );
 							?>
 								<tr>
 									<th scope="row" class="check-column">
-										<input type="checkbox" name="roles[]" value="<?php echo esc_attr( $role->name ); ?>" id="roles_<?php echo esc_attr( $role->name ); ?>"<?php checked( in_array( $role->name, $group->roles ) ); ?> />
+										<input type="checkbox" name="term_caps_roles[]" value="<?php echo esc_attr( $role->name ); ?>" id="roles_<?php echo esc_attr( $role->name ); ?>"<?php checked( in_array( $role->name, $group->roles ) ); ?> />
 									</th>
 									<td style="padding:0;">
 										<label for="roles_<?php echo esc_attr( $role->name ); ?>">
@@ -113,7 +113,7 @@ wp_enqueue_script( 'post', false, array(), false, true );
 							<tr>
 								<th scope="col" id="cb" class="manage-column column-cb check-column">
 									<label class="screen-reader-text" for="cb-select-all-2"><?php _e( 'Select All' ); ?></label>
-									<input id="cb-select-all-2" type="checkbox" name="all_capabilities" value="1" />
+									<input id="cb-select-all-2" type="checkbox" name="term_caps_all_capabilities" value="1" />
 								</th>
 								<th scope="col" id="title" class="manage-column column-title" style="padding:0;vertical-align:middle;">
 									<label for="cb-select-all-2">
@@ -213,7 +213,7 @@ wp_enqueue_script( 'post', false, array(), false, true );
 							?>
 								<tr>
 									<th scope="row" class="check-column">
-										<input type="checkbox" name="capabilities[]" value="<?php echo esc_attr( $capability ); ?>" id="capabilities_<?php echo esc_attr( $capability ); ?>"<?php checked( in_array( $capability, $group->capabilities ) ); ?> />
+										<input type="checkbox" name="term_caps_capabilities[]" value="<?php echo esc_attr( $capability ); ?>" id="capabilities_<?php echo esc_attr( $capability ); ?>"<?php checked( in_array( $capability, $group->capabilities ) ); ?> />
 									</th>
 									<td style="padding:0;">
 										<label for="capabilities_<?php echo esc_attr( $capability ); ?>">
@@ -244,8 +244,20 @@ wp_enqueue_script( 'post', false, array(), false, true );
 						$all_terms = $group->taxonomies[ $taxonomy->name ]->allow_all_terms;
 
 						$terms = $group->taxonomies[ $taxonomy->name ]->term_ids;
-					}
 
+						foreach ( $terms as $k => $term ) {
+							$terms[ $k ] = get_term( $term, $taxonomy->name );
+
+							if ( !empty( $terms[ $k ] ) ) {
+								$terms[ $k ] = $terms[ $k ]->name;
+							}
+							else {
+								unset( $terms[ $k ] );
+							}
+						}
+
+						$terms = array_values( $terms );
+					}
 			?>
 				<tr valign="top">
 					<th>
@@ -255,7 +267,7 @@ wp_enqueue_script( 'post', false, array(), false, true );
 					</th>
 					<td id="side-sortables">
 						<label for="all_<?php echo $taxonomy->name; ?>">
-							<input type="checkbox" name="all_<?php echo $taxonomy->name; ?>" id="all_<?php echo $taxonomy->name; ?>" class="allow-all" value="1"<?php checked( $all_terms ); ?> />
+							<input type="checkbox" name="term_caps_all_<?php echo $taxonomy->name; ?>" id="all_<?php echo $taxonomy->name; ?>" class="allow-all" value="1"<?php checked( $all_terms ); ?> />
 							<?php echo sprintf( __( 'Allow All %s', 'term-capabilities' ), $taxonomy->label ); ?>
 						</label>
 
@@ -268,7 +280,9 @@ wp_enqueue_script( 'post', false, array(), false, true );
 								$metabox = ob_get_clean();
 
 								// Insert our terms
-								$metabox = str_replace( '</textarea>', implode( ',', $terms ) . '</textarea>', $metabox );
+								$metabox = str_replace( '</textarea>', esc_textarea( implode( ',', $terms ) ) . '</textarea>', $metabox );
+
+								echo $metabox;
 							?>
 						</div>
 					</td>

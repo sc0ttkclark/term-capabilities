@@ -36,7 +36,8 @@ class TermCapsGroups {
 		$new_group = new TermCapsGroup( $title, $name );
 
 		// ToDo: We need to make sure the name is unique
-		$this->groups[ ] = $new_group;
+		$this->groups[ $new_group->name ] =& $new_group;
+
 		return $new_group;
 	}
 
@@ -46,10 +47,8 @@ class TermCapsGroups {
 	 * @param string $name
 	 */
 	public function remove_group ( $name ) {
-		for ( $i = 0; $i < count( $this->groups ); $i++ ) {
-			if ( $this->groups[ $i ]->name == $name ) {
-				array_splice( $this->groups, $i, 1 );
-			}
+		if ( isset( $this->groups[ $name ] ) ) {
+			unset( $this->groups[ $name ] );
 		}
 	}
 

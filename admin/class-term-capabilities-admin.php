@@ -65,6 +65,7 @@ class Term_Capabilities_Admin {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
 
 		// Add the options page and menu item.
+		add_action( 'admin_init', array( $this, 'process_plugin_admin_post' ) );
 		add_action( 'admin_menu', array( $this, 'add_plugin_admin_menu' ) );
 
 		// Add an action link pointing to the options page.
@@ -83,6 +84,7 @@ class Term_Capabilities_Admin {
 	public function init_groups () {
 		$this->groups_obj = new TermCapsGroups();
 
+		/*
 		// Test creation and save
 		$tax_obj1 = new TermCapsTaxonomy( 'category', array( 3, 5 ) );
 
@@ -101,6 +103,7 @@ class Term_Capabilities_Admin {
 		$new_group->capabilities = array( 'not_an_existing_cap' );
 
 		$this->groups_obj->save();
+		*/
 
 		// Test load
 		$this->groups_obj->load();
@@ -198,13 +201,156 @@ class Term_Capabilities_Admin {
 		echo "<pre>" . print_r( $this->groups_obj, true ) . "</pre>";
 	}
 
+	public function process_plugin_admin_post () {
+
+		if ( isset( $_GET[ 'page' ] ) && $this->plugin_slug == $_GET[ 'page' ] && isset( $_GET[ 'action' ] ) ) {
+			if ( !empty( $_POST ) && 'add' == $_GET[ 'action' ] ) {
+				$postdata = wp_unslash( $_POST );
+
+				$new_group = $this->groups_obj->add_group( $postdata[ 'term_caps_title' ], $postdata[ 'term_caps_name' ] );
+
+				if ( isset( $postdata[ 'term_caps_roles' ] ) ) {
+					$new_group->roles = (array) $postdata[ 'term_caps_roles' ];
+				}
+
+				if ( isset( $postdata[ 'term_caps_capabilities' ] ) ) {
+					$new_group->capabilities = (array) $postdata[ 'term_caps_capabilities' ];
+				}
+
+				$taxonomies = get_taxonomies( array(), 'objects' );
+
+				foreach ( $taxonomies as $taxonomy ) {
+					if ( in_array( $taxonomy->name, array( 'post_format', 'nav_menu', 'link_category' ) ) ) {
+						continue;
+					}
+
+					$all_terms = false;
+					$terms = array();
+
+					if ( isset( $postdata[ 'term_caps_all_' . $taxonomy->name ] ) && 1 == $postdata[ 'term_caps_all_' . $taxonomy->name ] ) {
+						$all_terms = true;
+					}
+					elseif ( isset( $postdata[ 'tax_input' ] ) && is_array( $postdata[ 'tax_input' ] ) && isset( $postdata[ 'tax_input' ][ $taxonomy->name ] ) && !empty( $postdata[ 'tax_input' ][ $taxonomy->name ] ) ) {
+						$terms = (array) $postdata[ 'tax_input' ][ $taxonomy->name ];
+
+						foreach ( $terms as $k => $term_name ) {
+							$term = get_term_by( 'name', $term_name, $taxonomy->name );
+
+							if ( !empty( $term ) ) {
+								$terms[ $k ] = $term->term_id;
+							}
+							else {
+								unset( $terms[ $k ] );
+							}
+						}
+
+						$terms = array_values( $terms );
+					}
+
+					if ( !empty( $terms ) || $all_terms ) {
+						$new_group->taxonomies[ $taxonomy->name ] = new TermCapsTaxonomy( $taxonomy->name, $terms, $all_terms );
+					}
+					elseif ( isset( $new_group->taxonomies[ $taxonomy->name ] ) ) {
+						unset( $new_group->taxonomies[ $taxonomy->name ] );
+					}
+				}
+
+				$this->groups_obj->save();
+
+				wp_redirect( add_query_arg( array( 'action' => 'edit', 'group' => $new_group->name, 'message' => 'added' ) ) );
+				die();
+			}
+			elseif ( !empty( $_POST ) && 'edit' == $_GET[ 'action' ] && isset( $_GET[ 'group' ] ) && !empty( $_GET[ 'group' ] ) ) {
+				$postdata = wp_unslash( $_POST );
+
+				if ( isset( $this->groups_obj->groups[ $_GET[ 'group' ] ] ) ) {
+					$group =& $this->groups_obj->groups[ $_GET[ 'group' ] ];
+
+					$group->title = $postdata[ 'term_caps_title' ];
+
+					if ( !empty( $postdata[ 'term_caps_name' ] ) ) {
+						$group->name = sanitize_title( $postdata[ 'term_caps_name' ] );
+					}
+					else {
+						$group->name = sanitize_title( $group->title );
+					}
+				}
+				else {
+					$group = $this->groups_obj->add_group( $postdata[ 'term_caps_title' ], $postdata[ 'term_caps_name' ] );
+				}
+
+				if ( isset( $postdata[ 'term_caps_roles' ] ) ) {
+					$group->roles = (array) $postdata[ 'term_caps_roles' ];
+				}
+
+				if ( isset( $postdata[ 'term_caps_capabilities' ] ) ) {
+					$group->capabilities = (array) $postdata[ 'term_caps_capabilities' ];
+				}
+
+				$taxonomies = get_taxonomies( array(), 'objects' );
+
+				foreach ( $taxonomies as $taxonomy ) {
+					if ( in_array( $taxonomy->name, array( 'post_format', 'nav_menu', 'link_category' ) ) ) {
+						continue;
+					}
+
+					$all_terms = false;
+					$terms = array();
+
+					if ( isset( $postdata[ 'term_caps_all_' . $taxonomy->name ] ) && 1 == $postdata[ 'term_caps_all_' . $taxonomy->name ] ) {
+						$all_terms = true;
+					}
+					elseif ( isset( $postdata[ 'tax_input' ] ) && is_array( $postdata[ 'tax_input' ] ) && isset( $postdata[ 'tax_input' ][ $taxonomy->name ] ) && !empty( $postdata[ 'tax_input' ][ $taxonomy->name ] ) ) {
+						$terms = (array) $postdata[ 'tax_input' ][ $taxonomy->name ];
+
+						foreach ( $terms as $k => $term_name ) {
+							$term = get_term_by( 'name', $term_name, $taxonomy->name );
+
+							if ( !empty( $term ) ) {
+								$terms[ $k ] = $term->term_id;
+							}
+							else {
+								unset( $terms[ $k ] );
+							}
+						}
+
+						$terms = array_values( $terms );
+					}
+
+					if ( !empty( $terms ) || $all_terms ) {
+						$group->taxonomies[ $taxonomy->name ] = new TermCapsTaxonomy( $taxonomy->name, $terms, $all_terms );
+					}
+					elseif ( isset( $group->taxonomies[ $taxonomy->name ] ) ) {
+						unset( $group->taxonomies[ $taxonomy->name ] );
+					}
+				}
+
+				$this->groups_obj->save();
+
+				wp_redirect( add_query_arg( array( 'action' => 'edit', 'group' => $group->name, 'message' => 'saved' ) ) );
+				die();
+			}
+			elseif ( 'delete' == $_GET[ 'action' ] && isset( $_GET[ 'group' ] ) && !empty( $_GET[ 'group' ] ) ) {
+				if ( isset( $this->groups_obj->groups[ $_GET[ 'group' ] ] ) ) {
+					unset( $this->groups_obj->groups[ $_GET[ 'group' ] ] );
+				}
+
+				$this->groups_obj->save();
+
+				wp_redirect( add_query_arg( array( 'action' => false, 'group' => false, 'message' => 'deleted' ) ) );
+				die();
+			}
+		}
+
+	}
+
 	/**
 	 * Render the settings page for this plugin.
 	 *
 	 * @since    1.0.0
 	 */
 	public function display_plugin_admin_page () {
-		require_once( 'classes/term-caps-groups.php' ); // Other dependency classes will get loaded
+		$groups =& $this->groups_obj;
 
 		if ( isset( $_GET[ 'action' ] ) && 'add' == $_GET[ 'action' ] ) {
 			include_once( 'views/admin-add.php' );
