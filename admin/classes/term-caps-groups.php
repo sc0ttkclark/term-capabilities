@@ -68,6 +68,8 @@ class TermCapsGroups {
 	public function load () {
 		$groups = get_option( self::OPTION_NAME );
 		if ( false !== $groups ) {
+
+			// ToDo: Error checking needed, detect bad data and report on it
 			$this->groups = unserialize( $groups );
 		}
 
