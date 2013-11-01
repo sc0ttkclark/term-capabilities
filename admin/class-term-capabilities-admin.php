@@ -64,6 +64,8 @@ class Term_Capabilities_Admin {
 		$plugin_basename = plugin_basename( plugin_dir_path( __FILE__ ) . $this->plugin_slug . '.php' );
 		add_filter( 'plugin_action_links_' . $plugin_basename, array( $this, 'add_action_links' ) );
 
+		// Hook into the metabox display machinery
+		add_action( 'add_meta_boxes', array ( $this, 'add_meta_boxes', 10, 2 ) );
 	}
 
 	/**
@@ -220,4 +222,42 @@ class Term_Capabilities_Admin {
 
 	}
 
+	/**
+	 * @param string $post_type The WordPress post type
+	 * @param WP_Post $post Post object being edited
+	 */
+	public function add_meta_boxes( $post_type, $post ) {
+
+		/*
+		if ( !{current user under coverage} ) {
+			return;
+		}
+		*/
+
+		/*
+		foreach ( get_object_taxonomies( $post ) as $tax_name ) {
+			$taxonomy = get_taxonomy( $tax_name );
+
+			// Ignore if not to be shown or not under coverage
+			if ( !$taxonomy->show_ui ) {
+				continue;
+			}
+
+			$label = $taxonomy->labels->name;
+
+			if ( !is_taxonomy_hierarchical( $tax_name ) ) {
+				$tax_meta_box_id = 'tagsdiv-' . $tax_name;
+			}
+			else {
+				$tax_meta_box_id = $tax_name . 'div';
+			}
+			$new_tax_meta_box_id = 'term-caps-' . $tax_meta_box_id;
+
+			remove_meta_box( $tax_meta_box_id, $post_type, 'side' );
+
+			// This needs fixed
+			//add_meta_box( $new_tax_meta_box_id, $label, 'term_caps_render_meta_box', null, 'side', 'core', array( 'tax_obj' => $tax_obj ) );
+		}
+		*/
+	}
 }
