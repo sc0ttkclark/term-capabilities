@@ -1,4 +1,6 @@
 <?php
+require_once( 'classes/term-caps-groups.php' ); // Other dependency classes will get loaded
+
 /**
  * Plugin Name.
  *
@@ -40,6 +42,11 @@ class Term_Capabilities_Admin {
 	protected $plugin_screen_hook_suffix = null;
 
 	/**
+	 * @var TermCapsGroups $groups_obj
+	 */
+	private $groups_obj = null;
+
+	/**
 	 * Initialize the plugin by loading admin scripts & styles and adding a
 	 * settings page and menu.
 	 *
@@ -67,7 +74,35 @@ class Term_Capabilities_Admin {
 		// Hook into the metabox display machinery
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ), 10, 2 );
 
+		// Hook into the post save mechanism to remove disallowed terms
 		add_filter( 'wp_insert_post_data', array( $this, 'insert_post_data' ), '99', 2 );
+
+		$this->init_groups();
+	}
+
+	private function init_groups () {
+		$this->groups_obj = new TermCapsGroups();
+
+		// Test creation and save
+		$tax_obj1 = new TermCapsTaxonomy( 'category', array( 3, 5 ) );
+		$tax_obj2 = new TermCapsTaxonomy( 'my_taxonomy' );
+		$tax_obj2->allow_all_terms = true;
+
+		$dummy_group = $this->groups_obj->add_group( 'dummy group' );
+		$this->groups_obj->remove_group( 'dummy-group' );
+
+		$new_group = $this->groups_obj->add_group( 'My Group' );
+
+		// The new instance variable still points to the internally stored group, so we can modify it
+		$new_group->taxonomies[ ] = $tax_obj1;
+		$new_group->taxonomies[ ] = $tax_obj2;
+		$new_group->roles = array( 'administrator', 'subscriber' );
+		$new_group->capabilities = array( 'not_an_existing_cap' );
+
+		$this->groups_obj->save();
+
+		// Test load
+		$this->groups_obj->load();
 	}
 
 	/**
@@ -161,32 +196,7 @@ class Term_Capabilities_Admin {
 
 	// ToDo: Testing only
 	public function pg_test () {
-		require_once( 'classes/term-caps-groups.php' ); // Other dependency classes will get loaded
-
-		$groups = new TermCapsGroups();
-
-		// Test creation and save
-		$tax_obj1 = new TermCapsTaxonomy( 'category', array( 3, 5 ) );
-		$tax_obj2 = new TermCapsTaxonomy( 'my_taxonomy' );
-		$tax_obj2->allow_all_terms = true;
-
-		$dummy_group = $groups->add_group( 'dummy group' );
-		$groups->remove_group( 'dummy-group' );
-
-		$new_group = $groups->add_group( 'My Group' );
-
-		// The new instance variable still points to the internally stored group, so we can modify it
-		$new_group->taxonomies[ ] = $tax_obj1;
-		$new_group->taxonomies[ ] = $tax_obj2;
-		$new_group->roles = array( 'administrator', 'subscriber' );
-		$new_group->capabilities = array( 'not_an_existing_cap' );
-
-		$groups->save();
-
-		// Test load
-		$groups->load();
-
-		echo "<pre>" . print_r( $groups, true ) . "</pre>";
+		echo "<pre>" . print_r( $this->groups_obj, true ) . "</pre>";
 	}
 
 	/**
@@ -240,7 +250,7 @@ class Term_Capabilities_Admin {
 		foreach ( get_object_taxonomies( $post ) as $tax_name ) {
 			$taxonomy = get_taxonomy( $tax_name );
 
-			// Ignore if not to be shown or not under coverage
+			// Ignore if not to be shown
 			if ( !$taxonomy->show_ui ) {
 				continue;
 			}
