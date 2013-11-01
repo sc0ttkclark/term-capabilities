@@ -65,7 +65,9 @@ class Term_Capabilities_Admin {
 		add_filter( 'plugin_action_links_' . $plugin_basename, array( $this, 'add_action_links' ) );
 
 		// Hook into the metabox display machinery
-		add_action( 'add_meta_boxes', array ( $this, 'add_meta_boxes', 10, 2 ) );
+		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ), 10, 2 );
+
+		add_filter( 'wp_insert_post_data', array( $this, 'insert_post_data' ), '99', 2 );
 	}
 
 	/**
@@ -259,5 +261,26 @@ class Term_Capabilities_Admin {
 			//add_meta_box( $new_tax_meta_box_id, $label, 'term_caps_render_meta_box', null, 'side', 'core', array( 'tax_obj' => $tax_obj ) );
 		}
 		*/
+	}
+
+	/**
+	 * @param $data
+	 * @param $postarr
+	 *
+	 * @return mixed
+	 */
+	function insert_post_data ( $data, $postarr ) {
+
+		/*
+		if ( !{current user under coverage} ) {
+			return $data;
+		}
+		*/
+		// We're only interested in posts that are being published
+		if ( 'publish' == $data[ 'post_status' ] ) {
+			// ToDo: Check that all set terms are allowed and unset those that are not
+		}
+
+		return $data;
 	}
 }
