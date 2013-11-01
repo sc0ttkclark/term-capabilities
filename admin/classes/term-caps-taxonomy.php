@@ -54,7 +54,7 @@ class TermCapsTaxonomy {
 
 				// Add each term ID from the taxonomy
 				foreach ( $all_terms as $this_term ) {
-					$allowed_term_ids[ ] = $this_term->term_id;
+					$allowed_term_ids[] = (int)$this_term->term_id;
 				}
 			}
 		}

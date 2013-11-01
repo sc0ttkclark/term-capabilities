@@ -24,7 +24,7 @@ class TermCapsGroups {
 	/**
 	 * @var int[] $allowed_terms Array of term IDs the current user can utilize, if covered
 	 */
-	private $allowed_terms = array();
+	public $allowed_terms = array();
 
 	/**
 	 * @param string $title Descriptive tile
@@ -56,7 +56,7 @@ class TermCapsGroups {
 	/**
 	 * @return bool Whether or not the current user is covered under any group restriction rules
 	 */
-	public function is_covered () {
+	public function is_current_user_covered () {
 		return $this->covered;
 	}
 

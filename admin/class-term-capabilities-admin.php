@@ -77,14 +77,15 @@ class Term_Capabilities_Admin {
 		// Hook into the post save mechanism to remove disallowed terms
 		add_filter( 'wp_insert_post_data', array( $this, 'insert_post_data' ), '99', 2 );
 
-		$this->init_groups();
+		add_action( 'wp_loaded', array( $this, 'init_groups' ) );
 	}
 
-	private function init_groups () {
+	public function init_groups () {
 		$this->groups_obj = new TermCapsGroups();
 
 		// Test creation and save
 		$tax_obj1 = new TermCapsTaxonomy( 'category', array( 3, 5 ) );
+
 		$tax_obj2 = new TermCapsTaxonomy( 'my_taxonomy' );
 		$tax_obj2->allow_all_terms = true;
 
@@ -139,7 +140,6 @@ class Term_Capabilities_Admin {
 		if ( $this->plugin_screen_hook_suffix == $screen->id ) {
 			wp_enqueue_style( $this->plugin_slug . '-admin-styles', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), Term_Capabilities::VERSION );
 		}
-
 	}
 
 	/**
@@ -159,7 +159,6 @@ class Term_Capabilities_Admin {
 		if ( $this->plugin_screen_hook_suffix == $screen->id ) {
 			wp_enqueue_script( $this->plugin_slug . '-admin-script', plugins_url( 'assets/js/admin.js', __FILE__ ), array( 'jquery' ), Term_Capabilities::VERSION );
 		}
-
 	}
 
 	/**
@@ -238,13 +237,11 @@ class Term_Capabilities_Admin {
 	 * @param string $post_type The WordPress post type
 	 * @param WP_Post $post Post object being edited
 	 */
-	public function add_meta_boxes( $post_type, $post ) {
+	public function add_meta_boxes ( $post_type, $post ) {
 
-		/*
-		if ( !{current user under coverage} ) {
+		if ( !$this->groups_obj->is_current_user_covered() ) {
 			return;
 		}
-		*/
 
 		/*
 		foreach ( get_object_taxonomies( $post ) as $tax_name ) {
@@ -281,14 +278,30 @@ class Term_Capabilities_Admin {
 	 */
 	function insert_post_data ( $data, $postarr ) {
 
-		/*
-		if ( !{current user under coverage} ) {
+		if ( !$this->groups_obj->is_current_user_covered() ) {
 			return $data;
 		}
-		*/
+
 		// We're only interested in posts that are being published
 		if ( 'publish' == $data[ 'post_status' ] ) {
 			// ToDo: Check that all set terms are allowed and unset those that are not
+
+			/*
+			for ( $i = 0; $i < count( $postarr[ 'post_category' ] ); $i++ ) {
+				if ( !in_array( (int) $postarr[ 'post_category' ][ $i ], $this->groups_obj->allowed_terms ) ) {
+					array_splice( $postarr[ 'post_category' ], $i, 1 );
+				}
+			}
+			*/
+			/**
+			 * [tax_input] => Array (
+			 * [my_taxonomy] => Array (
+			 * [0] => 0
+			 * [1] => 6
+			 * [2] => 8
+			 * )
+			 * [post_tag] =>
+			 */
 		}
 
 		return $data;
