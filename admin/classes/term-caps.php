@@ -1,6 +1,4 @@
 <?php
-require_once 'term-caps-group.php';
-
 /**
  * Class TermCaps
  */
@@ -15,19 +13,15 @@ class TermCaps {
 
 	/**
 	 * @var TermCapsGroup[] $groups
+	 *
+	 * This is currently the only thing that is serialized and saved.
 	 */
 	public $groups = array();
 
 	/**
-	 * @var bool $covered Is the current user covered under any group rules?
+	 * @var TermCapsCoverage $coverage
 	 */
-	private $covered = false;
-
-	/**
-	 * @var array $managed_taxonomies Covered for the current user.
-	 * 		Format: 'taxonomy' => (term, term, term), ...
-	 */
-	public $managed_taxonomies = array();
+	private $coverage = null;
 
 	/**
 	 * @param string $title Descriptive tile
@@ -83,7 +77,32 @@ class TermCaps {
 	 * @return bool Whether or not the current user is covered under any group restriction rules
 	 */
 	public function is_current_user_covered () {
-		return $this->covered;
+		return $this->coverage->is_current_user_covered();
+	}
+
+	/**
+	 * @param string $tax_name
+	 *
+	 * @return bool
+	 */
+	public function is_taxonomy_managed ( $tax_name ) {
+		return $this->coverage->is_taxonomy_managed( $tax_name );
+	}
+
+	/**
+	 * @param string $tax_name
+	 *
+	 * @return int[]|null Array of allowed term IDs for the taxonomy, or null if the tax isn't managed
+	 */
+	public function get_allowed_term_ids ( $tax_name ) {
+		return $this->coverage->get_allowed_term_ids( $tax_name );
+	}
+
+	/**
+	 *
+	 */
+	public function get_managed_taxonomies () {
+		return $this->coverage->get_managed_taxonomies();
 	}
 
 	/**
@@ -93,15 +112,15 @@ class TermCaps {
 	 * current user is covered
 	 */
 	public function load () {
-		$groups = get_option( self::OPTION_NAME );
-		if ( false !== $groups ) {
+		$groups_data = get_option( self::OPTION_NAME );
+		if ( false !== $groups_data ) {
 
 			// ToDo: Error checking needed, detect bad data and report on it
-			$this->groups = unserialize( $groups );
+			$this->groups = unserialize( $groups_data );
 		}
 
 		// Store all the coverage information that we may need to know about later
-		$this->init_coverage_info();
+		$this->coverage = new TermCapsCoverage( $this->groups );
 	}
 
 	/**
@@ -110,13 +129,30 @@ class TermCaps {
 	public function save () {
 		update_option( self::OPTION_NAME, serialize( $this->groups ) );
 	}
+}
+
+/**
+ * Class TermCapsCoverage
+ */
+class TermCapsCoverage {
 
 	/**
-	 * Called internally after load().  Initialize the basic coverage information for the current user
+	 * @var bool $covered Is the current user covered under any group rules?
 	 */
-	private function init_coverage_info () {
+	private $covered = false;
 
-		foreach ( $this->groups as $this_group ) {
+	/**
+	 * @var array $managed_taxonomies Covered for the current user.
+	 *        Format: 'taxonomy' => (term, term, term), ...
+	 */
+	public $managed_taxonomies = array();
+
+	/**
+	 * @param TermCapsGroup[] $groups
+	 */
+	public function __construct ( $groups ) {
+
+		foreach ( $groups as $this_group ) {
 
 			// Is the current user covered under this group?
 			if ( $this_group->is_user_covered() ) {
@@ -140,5 +176,178 @@ class TermCaps {
 				}
 			}
 		}
+	}
+
+	/**
+	 * @return bool Whether or not the current user is covered under any group restriction rules
+	 */
+	public function is_current_user_covered () {
+		return $this->covered;
+	}
+
+	/**
+	 * @param string $tax_name
+	 *
+	 * @return bool
+	 */
+	public function is_taxonomy_managed ( $tax_name ) {
+		return array_key_exists( $tax_name, $this->managed_taxonomies );
+	}
+
+	/**
+	 *
+	 */
+	public function get_managed_taxonomies () {
+		return ( array_keys( $this->managed_taxonomies ) );
+	}
+
+	/**
+	 * @param string $tax_name
+	 *
+	 * @return int[]|null Array of allowed term IDs for the taxonomy, or null if the tax isn't managed
+	 */
+	public function get_allowed_term_ids ( $tax_name ) {
+
+		if ( !$this->is_taxonomy_managed( $tax_name ) ) {
+			return null;
+		}
+
+		return $this->managed_taxonomies[ $tax_name ];
+	}
+}
+
+/**
+ * Class TermCapsGroup
+ */
+class TermCapsGroup {
+
+	/**
+	 * @var string $title Descriptive name
+	 */
+	public $title;
+
+	/**
+	 * @var string $name Slugified identifier
+	 */
+	public $name;
+
+	/**
+	 * @var TermCapsTaxonomy[]
+	 */
+	public $taxonomies = array();
+
+	/**
+	 * @var string[] $roles
+	 */
+	public $roles = array();
+
+	/**
+	 * @var string[] $capabilities
+	 */
+	public $capabilities = array();
+
+	/**
+	 * @param string $title Descriptive tile
+	 * @param string|null $name Slugified identifier (will use sanitized version of $title if omitted)
+	 */
+	public function __construct ( $title, $name = null ) {
+		$this->title = $title;
+		$this->name = ( !empty( $name ) ) ? sanitize_title( $name ) : sanitize_title( $title );
+	}
+
+	/**
+	 * @param int|null $target_user_id Omit to check the current user
+	 *
+	 * @return bool
+	 */
+	public function is_user_covered ( $target_user_id = null ) {
+
+		// Get the specified user, or the current user if omitted
+		$target_user = ( null !== $target_user_id ) ? get_userdata( $target_user_id ) : wp_get_current_user();
+
+		// Check if they're covered through any roles
+		if ( !empty( $this->roles ) ) {
+			foreach ( $this->roles as $this_role ) {
+				if ( in_array( $this_role, (array) $target_user->roles ) ) {
+					return true;
+				}
+			}
+		}
+
+		// Check if they're covered through any capabilities
+		if ( !empty( $this->capabilities ) ) {
+			foreach ( $this->capabilities as $this_capability ) {
+				if ( array_key_exists( $this_capability, $target_user->allcaps ) ) {
+					return true;
+				}
+			}
+		}
+
+		// If we make it here then they're not covered
+		return false;
+	}
+}
+
+/**
+ * Class TermCapsTaxonomy
+ */
+class TermCapsTaxonomy {
+
+	/**
+	 * @var string $taxonomy_name
+	 */
+	public $taxonomy_name;
+
+	/**
+	 * @var bool $allow_all_terms
+	 */
+	public $allow_all_terms;
+
+	/**
+	 * @var bool $auto_enable_new_terms
+	 */
+	public $auto_enable_new_terms;
+
+	/**
+	 * @var int[] $term_ids
+	 */
+	public $term_ids = array();
+
+	/**
+	 * @param string $taxonomy_name
+	 * @param int[] $term_ids
+	 * @param bool $allow_all_terms
+	 * @param bool $auto_enable_new_terms
+	 */
+	public function __construct ( $taxonomy_name, $term_ids = array(), $allow_all_terms = false, $auto_enable_new_terms = false ) {
+		$this->taxonomy_name = $taxonomy_name;
+		$this->allow_all_terms = $allow_all_terms;
+		$this->auto_enable_new_terms = $auto_enable_new_terms;
+		$this->term_ids = (array) $term_ids;
+	}
+
+	/**
+	 * @return int[] Array of allowed term IDs for this taxonomy
+	 */
+	public function get_allowed_term_ids () {
+
+		// Default to the term ID array
+		$allowed_term_ids = $this->term_ids;
+
+		if ( $this->allow_all_terms ) {
+			$allowed_term_ids = array();
+			$all_terms = get_terms( $this->taxonomy_name, array( 'hide_empty' => false ) );
+
+			// ToDo: We should consider some logging if the tax name wasn't found
+			if ( is_array( $all_terms ) ) {
+
+				// Add each term ID from the taxonomy
+				foreach ( $all_terms as $this_term ) {
+					$allowed_term_ids[ ] = (int) $this_term->term_id;
+				}
+			}
+		}
+
+		return $allowed_term_ids;
 	}
 }

@@ -76,16 +76,15 @@ class Term_Capabilities_Admin {
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ), 10, 2 );
 
 		// Hook into the post save mechanism to remove disallowed terms
-		//add_filter( 'wp_insert_post_data', array( $this, 'insert_post_data' ), '99', 2 );
 		add_action( 'save_post', array( $this, 'save_post' ) );
 
-		add_action( 'wp_loaded', array( $this, 'init_groups' ) );
+		add_action( 'wp_loaded', array( $this, 'init_termcaps_object' ) );
 	}
 
 	/**
 	 *
 	 */
-	public function init_groups () {
+	public function init_termcaps_object () {
 		$this->termcaps = new TermCaps();
 		$this->termcaps->load();
 	}
@@ -220,7 +219,7 @@ class Term_Capabilities_Admin {
 		}
 
 		// Collect and store all the $_POST data and save
-		$this->save_group( $group, $postdata );
+		$this->save_group( $new_group, $postdata );
 
 		wp_redirect( add_query_arg( array(
 			'action' => 'edit',
@@ -274,7 +273,7 @@ class Term_Capabilities_Admin {
 	 * @param TermCapsGroup $group
 	 * @param array $postdata
 	 */
-	public function save_group ( $group, $postdata ) {
+	public function save_group ( TermCapsGroup $group, $postdata ) {
 		$taxonomies = get_taxonomies( array(), 'objects' );
 
 		foreach ( $taxonomies as $taxonomy ) {
@@ -372,8 +371,6 @@ class Term_Capabilities_Admin {
 	public function add_meta_boxes ( $post_type, $post ) {
 		$termcaps = $this->termcaps;
 
-		// ToDo: FixMe
-
 		// Nothing to do if the current user isn't covered
 		if ( !$termcaps->is_current_user_covered() ) {
 			return;
@@ -387,12 +384,10 @@ class Term_Capabilities_Admin {
 				continue;
 			}
 
-			// Skip this taxonomy if it isn't managed
-			if ( !array_key_exists( $tax_name, $termcaps->managed_taxonomies ) ) {
+			// Skip this taxonomy if it isn't managed under user coverage
+			if ( !$termcaps->is_taxonomy_managed( $tax_name ) ) {
 				continue;
 			}
-
-			$label = $taxonomy->labels->name;
 
 			if ( !is_taxonomy_hierarchical( $tax_name ) ) {
 				$tax_meta_box_id = 'tagsdiv-' . $tax_name;
@@ -408,14 +403,13 @@ class Term_Capabilities_Admin {
 			// Insert our own metabox if there are allowable terms for this taxonomy
 			add_meta_box(
 				$new_tax_meta_box_id,
-				$label,
+				$taxonomy->labels->name,
 				array( $this, 'term_caps_render_meta_box' ),
 				null,
 				'side',
 				'core',
 				array(
-					'tax_name' => $tax_name,
-					'term_ids' => $termcaps->managed_taxonomies[ $tax_name ]
+					'tax_name' => $tax_name
 				)
 			);
 		}
@@ -429,7 +423,7 @@ class Term_Capabilities_Admin {
 
 		// ToDo: FixMe from WordPress core example
 		$tax_name = $metabox[ 'args' ][ 'tax_name' ];
-		$term_ids = $metabox[ 'args' ][ 'term_ids' ];
+		$term_ids = $this->termcaps->get_allowed_term_ids( $tax_name );
 
 		$input_name = ( 'category' == $tax_name ) ? 'post_category[]' : "tax_input[$tax_name][]";
 		?>
@@ -438,7 +432,7 @@ class Term_Capabilities_Admin {
 			<ul id="categorychecklist" data-wp-lists="list:category" class="categorychecklist form-no-clear">
 
 				<?php foreach ( $term_ids as $this_term_id ) { ?>
-					<?php $term_name = get_term_by( 'id', $this_term_id, $tax_name)->name; ?>
+					<?php $term_name = get_term_by( 'id', $this_term_id, $tax_name )->name; ?>
 					<li id="category-<?php echo $this_term_id; ?>">
 						<label class="selectit">
 							<input value="<?php echo $this_term_id; ?>" type="checkbox" name="<?php echo $input_name; ?>" id="in-category-<?php echo $this_term_id; ?>"> <?php echo $term_name; ?>
@@ -455,14 +449,22 @@ class Term_Capabilities_Admin {
 	 * @param int $post_id The ID of the post.
 	 */
 	public function save_post ( $post_id ) {
+		$termcaps = $this->termcaps;
 
-		if ( !$this->termcaps->is_current_user_covered() ) {
+		// Nothing to do if the current user isn't under any coverage
+		if ( !$termcaps->is_current_user_covered() ) {
 			return;
 		}
 
-		foreach ( $this->termcaps->managed_taxonomies as $tax_name => $allowed_term_ids ) {
+		// Loop through all the managed taxonomies
+		foreach ( $termcaps->get_managed_taxonomies() as $tax_name ) {
+
+			// Get the terms saved on this post for this taxonomy
 			$saved_terms = wp_get_object_terms( $post_id, $tax_name, array( 'fields' => 'ids' ) );
-			$terms_to_save = array_intersect( array_map( 'absint', $saved_terms ), $allowed_term_ids );
+			$saved_terms = array_map( 'absint', $saved_terms ); // Cast all the term IDs to int for array_intersect()
+
+			// Remove any disallowed terms from the list and save
+			$terms_to_save = array_intersect( $saved_terms, $termcaps->get_allowed_term_ids( $tax_name ) );
 			wp_set_object_terms( $post_id, $terms_to_save, $tax_name );
 		}
 	}
