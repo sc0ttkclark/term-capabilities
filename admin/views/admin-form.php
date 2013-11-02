@@ -237,13 +237,13 @@ wp_enqueue_script( 'post', false, array(), false, true );
 						continue;
 					}
 
-					$all_terms = false;
+					$allow_all_terms = false;
 					$terms = array();
 
-					if ( isset( $group->taxonomies[ $taxonomy->name ] ) ) {
-						$all_terms = $group->taxonomies[ $taxonomy->name ]->allow_all_terms;
-
-						$terms = $group->taxonomies[ $taxonomy->name ]->term_ids;
+					$managed_taxonomy = $group->get_taxonomy( $taxonomy->name );
+					if ( null != $managed_taxonomy ) {
+						$allow_all_terms = $managed_taxonomy->allow_all_terms;
+						$terms = $managed_taxonomy->term_ids;
 
 						foreach ( $terms as $k => $term ) {
 							$terms[ $k ] = get_term( $term, $taxonomy->name );
@@ -267,7 +267,7 @@ wp_enqueue_script( 'post', false, array(), false, true );
 					</th>
 					<td id="side-sortables">
 						<label for="all_<?php echo $taxonomy->name; ?>">
-							<input type="checkbox" name="term_caps_all_<?php echo $taxonomy->name; ?>" id="all_<?php echo $taxonomy->name; ?>" class="allow-all" value="1"<?php checked( $all_terms ); ?> />
+							<input type="checkbox" name="term_caps_all_<?php echo $taxonomy->name; ?>" id="all_<?php echo $taxonomy->name; ?>" class="allow-all" value="1"<?php checked( $allow_all_terms ); ?> />
 							<?php echo sprintf( __( 'Allow All %s', 'term-capabilities' ), $taxonomy->label ); ?>
 						</label>
 

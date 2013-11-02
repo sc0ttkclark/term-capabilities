@@ -158,7 +158,7 @@ class TermCapsCoverage {
 				$this->covered = true; // Flag the current user as being under coverage
 
 				// Store all managed tax/term information for this group
-				foreach ( $this_group->taxonomies as $this_tax ) {
+				foreach ( $this_group->get_taxonomies() as $this_tax ) {
 
 					$tax_name = $this_tax->taxonomy_name;
 					$new_terms = $this_tax->get_allowed_term_ids();
@@ -231,11 +231,6 @@ class TermCapsGroup {
 	public $name;
 
 	/**
-	 * @var TermCapsTaxonomy[]
-	 */
-	public $taxonomies = array();
-
-	/**
 	 * @var string[] $roles
 	 */
 	public $roles = array();
@@ -246,12 +241,62 @@ class TermCapsGroup {
 	public $capabilities = array();
 
 	/**
+	 * @var TermCapsTaxonomy[]
+	 */
+	private $taxonomies = array();
+
+	/**
 	 * @param string $title Descriptive tile
 	 * @param string|null $name Slugified identifier (will use sanitized version of $title if omitted)
 	 */
 	public function __construct ( $title, $name = null ) {
 		$this->title = $title;
 		$this->name = ( !empty( $name ) ) ? sanitize_title( $name ) : sanitize_title( $title );
+	}
+
+	/**
+	 * @param string $taxonomy_name
+	 * @param int[] $term_ids
+	 * @param bool $allow_all_terms
+	 * @param bool $auto_enable_new_terms
+	 */
+	public function add_taxonomy ( $taxonomy_name, $term_ids = array(), $allow_all_terms = false, $auto_enable_new_terms = false ) {
+		$this->taxonomies[] = new TermCapsTaxonomy( $taxonomy_name, $term_ids, $allow_all_terms, $auto_enable_new_terms );
+	}
+
+	/**
+	 * @param $taxonomy_name
+	 *
+	 * @return null|TermCapsTaxonomy
+	 */
+	public function get_taxonomy( $taxonomy_name ) {
+
+		foreach ( $this->taxonomies as $this_taxonomy ) {
+			if ( $taxonomy_name == $this_taxonomy->taxonomy_name ) {
+				return $this_taxonomy;
+			}
+		}
+
+		// Didn't find the target name
+		return null;
+	}
+
+	/**
+	 * @return TermCapsTaxonomy[]
+	 */
+	public function get_taxonomies() {
+		return $this->taxonomies;
+	}
+
+	/**
+	 * @param string $taxonomy_name
+	 */
+	public function remove_taxonomy( $taxonomy_name ) {
+		for ( $i = 0; $i < count( $this->taxonomies ); $i++ ) {
+			if ( $this->taxonomies[ $i ]->taxonomy_name == $taxonomy_name ) {
+				array_splice( $this->taxonomies, $i, 1 );
+			}
+		}
 	}
 
 	/**

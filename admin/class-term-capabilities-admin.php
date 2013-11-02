@@ -191,6 +191,7 @@ class Term_Capabilities_Admin {
 			return;
 		}
 
+		// Farm out to the action handlers
 		if ( !empty( $_POST ) && 'add' == $_GET[ 'action' ] ) {
 			$this->add_group();
 		}
@@ -298,10 +299,11 @@ class Term_Capabilities_Admin {
 			}
 
 			if ( !empty( $terms ) || $all_terms ) {
-				$group->taxonomies[ $taxonomy->name ] = new TermCapsTaxonomy( $taxonomy->name, $terms, $all_terms );
+				$group->remove_taxonomy( $taxonomy->name );
+				$group->add_taxonomy( $taxonomy->name, $terms, $all_terms );
 			}
-			elseif ( isset( $group->taxonomies[ $taxonomy->name ] ) ) {
-				unset( $group->taxonomies[ $taxonomy->name ] );
+			elseif ( null != $group->get_taxonomy( $taxonomy->name ) ) {
+				$group->remove_taxonomy( $taxonomy->name );
 			}
 		}
 
