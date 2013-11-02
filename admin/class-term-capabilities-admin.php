@@ -313,7 +313,7 @@ class Term_Capabilities_Admin {
 				$terms = (array) $postdata[ 'tax_input' ][ $taxonomy->name ];
 
 				foreach ( $terms as $k => $term_name ) {
-					$term = get_term_by( 'slug', $term_name, $taxonomy->name );
+					$term = get_term_by( 'name', $term_name, $taxonomy->name );
 
 					if ( !empty( $term ) ) {
 						$terms[ $k ] = $term->term_id;
