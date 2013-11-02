@@ -219,45 +219,8 @@ class Term_Capabilities_Admin {
 			$new_group->capabilities = (array) $postdata[ 'term_caps_capabilities' ];
 		}
 
-		$taxonomies = get_taxonomies( array(), 'objects' );
-
-		foreach ( $taxonomies as $taxonomy ) {
-			if ( in_array( $taxonomy->name, TermCaps::$IGNORED_TAXONOMIES ) ) {
-				continue;
-			}
-
-			$all_terms = false;
-			$terms = array();
-
-			if ( isset( $postdata[ 'term_caps_all_' . $taxonomy->name ] ) && 1 == $postdata[ 'term_caps_all_' . $taxonomy->name ] ) {
-				$all_terms = true;
-			}
-			elseif ( isset( $postdata[ 'tax_input' ] ) && is_array( $postdata[ 'tax_input' ] ) && isset( $postdata[ 'tax_input' ][ $taxonomy->name ] ) && !empty( $postdata[ 'tax_input' ][ $taxonomy->name ] ) ) {
-				$terms = (array) $postdata[ 'tax_input' ][ $taxonomy->name ];
-
-				foreach ( $terms as $k => $term_name ) {
-					$term = get_term_by( 'name', $term_name, $taxonomy->name );
-
-					if ( !empty( $term ) ) {
-						$terms[ $k ] = $term->term_id;
-					}
-					else {
-						unset( $terms[ $k ] );
-					}
-				}
-
-				$terms = array_values( $terms );
-			}
-
-			if ( !empty( $terms ) || $all_terms ) {
-				$new_group->taxonomies[ $taxonomy->name ] = new TermCapsTaxonomy( $taxonomy->name, $terms, $all_terms );
-			}
-			elseif ( isset( $new_group->taxonomies[ $taxonomy->name ] ) ) {
-				unset( $new_group->taxonomies[ $taxonomy->name ] );
-			}
-		}
-
-		$this->termcaps->save();
+		// Collect and store all the $_POST data and save
+		$this->save_group( $group, $postdata );
 
 		wp_redirect( add_query_arg( array(
 			'action' => 'edit',
@@ -296,6 +259,22 @@ class Term_Capabilities_Admin {
 			$group->capabilities = (array) $postdata[ 'term_caps_capabilities' ];
 		}
 
+		// Collect and store all the $_POST data and save
+		$this->save_group( $group, $postdata );
+
+		wp_redirect( add_query_arg( array(
+			'action' => 'edit',
+			'group' => $group->name,
+			'message' => 'saved'
+		) ) );
+		die();
+	}
+
+	/**
+	 * @param TermCapsGroup $group
+	 * @param array $postdata
+	 */
+	public function save_group ( $group, $postdata ) {
 		$taxonomies = get_taxonomies( array(), 'objects' );
 
 		foreach ( $taxonomies as $taxonomy ) {
@@ -335,13 +314,6 @@ class Term_Capabilities_Admin {
 		}
 
 		$this->termcaps->save();
-
-		wp_redirect( add_query_arg( array(
-			'action' => 'edit',
-			'group' => $group->name,
-			'message' => 'saved'
-		) ) );
-		die();
 	}
 
 	/**
@@ -365,7 +337,7 @@ class Term_Capabilities_Admin {
 	 * @since    1.0.0
 	 */
 	public function display_plugin_admin_page () {
-		$termcaps = $this->termcaps;
+		$termcaps = $this->termcaps; // Used by the views
 
 		if ( isset( $_GET[ 'action' ] ) && 'add' == $_GET[ 'action' ] ) {
 			include_once( 'views/admin-add.php' );
@@ -398,19 +370,25 @@ class Term_Capabilities_Admin {
 	 * @param WP_Post $post Post object being edited
 	 */
 	public function add_meta_boxes ( $post_type, $post ) {
+		$termcaps = $this->termcaps;
 
 		// ToDo: FixMe
 
 		// Nothing to do if the current user isn't covered
-		if ( !$this->termcaps->is_current_user_covered() ) {
+		if ( !$termcaps->is_current_user_covered() ) {
 			return;
 		}
 
 		foreach ( get_object_taxonomies( $post ) as $tax_name ) {
 			$taxonomy = get_taxonomy( $tax_name );
 
-			// Ignore hidden and some special taxonomies
-			if ( !$taxonomy->show_ui || in_array( $tax_name, array( 'post_format', 'nav_menu', 'link_category' ) ) ) {
+			// Skip  hidden and some special taxonomies
+			if ( !$taxonomy->show_ui || in_array( $tax_name, TermCaps::$IGNORED_TAXONOMIES ) ) {
+				continue;
+			}
+
+			// Skip this taxonomy if it isn't managed
+			if ( !array_key_exists( $tax_name, $termcaps->managed_taxonomies ) ) {
 				continue;
 			}
 
@@ -424,31 +402,22 @@ class Term_Capabilities_Admin {
 			}
 			$new_tax_meta_box_id = 'term-caps-' . $tax_meta_box_id;
 
+			// Replace the stock metabox with our own
 			// ToDo: leaving the original metabox in now for debugging
 			//remove_meta_box( $tax_meta_box_id, $post_type, 'side' );
-
-			// Run through the list of all allowed terms and grab the ones for this taxonomy
-			$allowed_tax_terms = array();
-
-			// ToDo: FixMe on this whole section
-			/*
-			foreach ( $this->termcaps->allowed_terms as $this_term_id ) {
-
-				// Is this allowed term in the target category?
-				$term_info = get_term_by( 'id', $this_term_id, $tax_name );
-				if ( is_object( $term_info ) ) {
-					$allowed_tax_terms[ ] = $term_info;
-				}
-			}
-
 			// Insert our own metabox if there are allowable terms for this taxonomy
-			if ( count( $allowed_tax_terms ) > 0 ) {
-				add_meta_box( $new_tax_meta_box_id, $label, array(
-					$this,
-					'term_caps_render_meta_box'
-				), null, 'side', 'core', array( 'allowed_tax_terms' => $allowed_tax_terms ) );
-			}
-			*/
+			add_meta_box(
+				$new_tax_meta_box_id,
+				$label,
+				array( $this, 'term_caps_render_meta_box' ),
+				null,
+				'side',
+				'core',
+				array(
+					'tax_name' => $tax_name,
+					'term_ids' => $termcaps->managed_taxonomies[ $tax_name ]
+				)
+			);
 		}
 	}
 
@@ -458,10 +427,9 @@ class Term_Capabilities_Admin {
 	 */
 	public function term_caps_render_meta_box ( $post, $metabox ) {
 
-		// ToDo: FixMe
-
-		$allowed_tax_terms = $metabox[ 'args' ][ 'allowed_tax_terms' ]; // Array of term objects returned from get_term_by()
-		$tax_name = $allowed_tax_terms[ 0 ]->taxonomy; // Taxonomy name is in all the elements, just grab the first
+		// ToDo: FixMe from WordPress core example
+		$tax_name = $metabox[ 'args' ][ 'tax_name' ];
+		$term_ids = $metabox[ 'args' ][ 'term_ids' ];
 
 		$input_name = ( 'category' == $tax_name ) ? 'post_category[]' : "tax_input[$tax_name][]";
 		?>
@@ -469,10 +437,11 @@ class Term_Capabilities_Admin {
 			<input type="hidden" name="<?php echo $input_name; ?>" value="0" />
 			<ul id="categorychecklist" data-wp-lists="list:category" class="categorychecklist form-no-clear">
 
-				<?php foreach ( $allowed_tax_terms as $term_obj ) { ?>
-					<li id="category-<?php echo $term_obj->term_id; ?>">
+				<?php foreach ( $term_ids as $this_term_id ) { ?>
+					<?php $term_name = get_term_by( 'id', $this_term_id, $tax_name)->name; ?>
+					<li id="category-<?php echo $this_term_id; ?>">
 						<label class="selectit">
-							<input value="<?php echo $term_obj->term_id; ?>" type="checkbox" name="<?php echo $input_name; ?>" id="in-category-<?php echo $term_obj->term_id; ?>"> <?php echo $term_obj->name; ?>
+							<input value="<?php echo $this_term_id; ?>" type="checkbox" name="<?php echo $input_name; ?>" id="in-category-<?php echo $this_term_id; ?>"> <?php echo $term_name; ?>
 						</label>
 					</li>
 				<?php } ?>

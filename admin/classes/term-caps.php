@@ -24,7 +24,8 @@ class TermCaps {
 	private $covered = false;
 
 	/**
-	 * @var array $managed_taxonomies Covered for the current user. Format: 'taxonomy' => (term, term, term), ...
+	 * @var array $managed_taxonomies Covered for the current user.
+	 * 		Format: 'taxonomy' => (term, term, term), ...
 	 */
 	public $managed_taxonomies = array();
 
@@ -121,7 +122,7 @@ class TermCaps {
 			if ( $this_group->is_user_covered() ) {
 				$this->covered = true; // Flag the current user as being under coverage
 
-				// Store all managed tax/term information
+				// Store all managed tax/term information for this group
 				foreach ( $this_group->taxonomies as $this_tax ) {
 
 					$tax_name = $this_tax->taxonomy_name;
