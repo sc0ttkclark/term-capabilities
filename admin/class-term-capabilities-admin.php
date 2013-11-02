@@ -210,14 +210,6 @@ class Term_Capabilities_Admin {
 
 		$new_group = $this->termcaps->add_group( $postdata[ 'term_caps_title' ], $postdata[ 'term_caps_name' ] );
 
-		if ( isset( $postdata[ 'term_caps_roles' ] ) ) {
-			$new_group->roles = (array) $postdata[ 'term_caps_roles' ];
-		}
-
-		if ( isset( $postdata[ 'term_caps_capabilities' ] ) ) {
-			$new_group->capabilities = (array) $postdata[ 'term_caps_capabilities' ];
-		}
-
 		// Collect and store all the $_POST data and save
 		$this->save_group( $new_group, $postdata );
 
@@ -250,14 +242,6 @@ class Term_Capabilities_Admin {
 			$group = $this->termcaps->add_group( $postdata[ 'term_caps_title' ], $postdata[ 'term_caps_name' ] );
 		}
 
-		if ( isset( $postdata[ 'term_caps_roles' ] ) ) {
-			$group->roles = (array) $postdata[ 'term_caps_roles' ];
-		}
-
-		if ( isset( $postdata[ 'term_caps_capabilities' ] ) ) {
-			$group->capabilities = (array) $postdata[ 'term_caps_capabilities' ];
-		}
-
 		// Collect and store all the $_POST data and save
 		$this->save_group( $group, $postdata );
 
@@ -274,6 +258,15 @@ class Term_Capabilities_Admin {
 	 * @param array $postdata
 	 */
 	public function save_group ( TermCapsGroup $group, $postdata ) {
+
+		if ( isset( $postdata[ 'term_caps_roles' ] ) ) {
+			$group->roles = (array) $postdata[ 'term_caps_roles' ];
+		}
+
+		if ( isset( $postdata[ 'term_caps_capabilities' ] ) ) {
+			$group->capabilities = (array) $postdata[ 'term_caps_capabilities' ];
+		}
+
 		$taxonomies = get_taxonomies( array(), 'objects' );
 
 		foreach ( $taxonomies as $taxonomy ) {
@@ -288,7 +281,7 @@ class Term_Capabilities_Admin {
 				$all_terms = true;
 			}
 			elseif ( isset( $postdata[ 'tax_input' ] ) && is_array( $postdata[ 'tax_input' ] ) && isset( $postdata[ 'tax_input' ][ $taxonomy->name ] ) && !empty( $postdata[ 'tax_input' ][ $taxonomy->name ] ) ) {
-				$terms = (array) $postdata[ 'tax_input' ][ $taxonomy->name ];
+				$terms = (array) explode( ',', $postdata[ 'tax_input' ][ $taxonomy->name ] );
 
 				foreach ( $terms as $k => $term_name ) {
 					$term = get_term_by( 'name', $term_name, $taxonomy->name );
@@ -400,7 +393,6 @@ class Term_Capabilities_Admin {
 			// Replace the stock metabox with our own
 			// ToDo: leaving the original metabox in now for debugging
 			//remove_meta_box( $tax_meta_box_id, $post_type, 'side' );
-			// Insert our own metabox if there are allowable terms for this taxonomy
 			add_meta_box(
 				$new_tax_meta_box_id,
 				$taxonomy->labels->name,

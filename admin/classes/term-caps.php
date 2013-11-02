@@ -99,7 +99,7 @@ class TermCaps {
 	}
 
 	/**
-	 *
+	 * @return string[] Array of managed taxonomy names
 	 */
 	public function get_managed_taxonomies () {
 		return $this->coverage->get_managed_taxonomies();
@@ -108,8 +108,7 @@ class TermCaps {
 	/**
 	 * Load the persisted groups data
 	 *
-	 * The function has the side effect of setting the covered flag and looking up all allowed terms if the
-	 * current user is covered
+	 * The function has the side effect of initializing the coverage object
 	 */
 	public function load () {
 		$groups_data = get_option( self::OPTION_NAME );
@@ -142,8 +141,8 @@ class TermCapsCoverage {
 	private $covered = false;
 
 	/**
-	 * @var array $managed_taxonomies Covered for the current user.
-	 *        Format: 'taxonomy' => (term, term, term), ...
+	 * @var array $managed_taxonomies Covered for the current user, consolidated across all groups
+	 *        Format: 'taxonomy' => (termID, termID, termID), ...
 	 */
 	public $managed_taxonomies = array();
 
@@ -164,8 +163,8 @@ class TermCapsCoverage {
 					$tax_name = $this_tax->taxonomy_name;
 					$new_terms = $this_tax->get_allowed_term_ids();
 
-					// Have we added this taxonomy yet?
-					if ( array_key_exists( $tax_name, $this->managed_taxonomies ) ) {
+					// Have we added this taxonomy before?
+					if ( $this->is_taxonomy_managed( $tax_name ) ) {
 						// Append any new unique terms to the taxonomy
 						$this->managed_taxonomies[ $tax_name ] = array_unique( array_merge( $this->managed_taxonomies[ $tax_name ], $new_terms ) );
 					}
@@ -188,17 +187,17 @@ class TermCapsCoverage {
 	/**
 	 * @param string $tax_name
 	 *
-	 * @return bool
+	 * @return bool Whether or not the taxonomy is managed for the user across one ore more groups
 	 */
 	public function is_taxonomy_managed ( $tax_name ) {
 		return array_key_exists( $tax_name, $this->managed_taxonomies );
 	}
 
 	/**
-	 *
+	 * @return string[] Array of managed taxonomy names
 	 */
 	public function get_managed_taxonomies () {
-		return ( array_keys( $this->managed_taxonomies ) );
+		return array_keys( $this->managed_taxonomies );
 	}
 
 	/**
