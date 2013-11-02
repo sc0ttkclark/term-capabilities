@@ -77,6 +77,7 @@ class Term_Capabilities_Admin {
 
 		// Hook into the post save mechanism to remove disallowed terms
 		//add_filter( 'wp_insert_post_data', array( $this, 'insert_post_data' ), '99', 2 );
+		add_action( 'save_post', array( $this, 'save_post' ) );
 
 		add_action( 'wp_loaded', array( $this, 'init_groups' ) );
 	}
@@ -205,7 +206,7 @@ class Term_Capabilities_Admin {
 	/**
 	 *
 	 */
-	public function add_group() {
+	public function add_group () {
 		$postdata = wp_unslash( $_POST );
 
 		$new_group = $this->termcaps->add_group( $postdata[ 'term_caps_title' ], $postdata[ 'term_caps_name' ] );
@@ -221,7 +222,7 @@ class Term_Capabilities_Admin {
 		$taxonomies = get_taxonomies( array(), 'objects' );
 
 		foreach ( $taxonomies as $taxonomy ) {
-			if ( in_array( $taxonomy->name, array( 'post_format', 'nav_menu', 'link_category' ) ) ) {
+			if ( in_array( $taxonomy->name, TermCaps::$IGNORED_TAXONOMIES ) ) {
 				continue;
 			}
 
@@ -269,7 +270,7 @@ class Term_Capabilities_Admin {
 	/**
 	 *
 	 */
-	public function edit_group() {
+	public function edit_group () {
 		$postdata = wp_unslash( $_POST );
 
 		$group = $this->termcaps->get_group( $_GET[ 'group' ] );
@@ -298,7 +299,7 @@ class Term_Capabilities_Admin {
 		$taxonomies = get_taxonomies( array(), 'objects' );
 
 		foreach ( $taxonomies as $taxonomy ) {
-			if ( in_array( $taxonomy->name, array( 'post_format', 'nav_menu', 'link_category' ) ) ) {
+			if ( in_array( $taxonomy->name, TermCaps::$IGNORED_TAXONOMIES ) ) {
 				continue;
 			}
 
@@ -312,7 +313,7 @@ class Term_Capabilities_Admin {
 				$terms = (array) $postdata[ 'tax_input' ][ $taxonomy->name ];
 
 				foreach ( $terms as $k => $term_name ) {
-					$term = get_term_by( 'name', $term_name, $taxonomy->name );
+					$term = get_term_by( 'slug', $term_name, $taxonomy->name );
 
 					if ( !empty( $term ) ) {
 						$terms[ $k ] = $term->term_id;
@@ -346,9 +347,10 @@ class Term_Capabilities_Admin {
 	/**
 	 *
 	 */
-	public function delete_group() {
-		if ( isset( $this->termcaps->groups[ $_GET[ 'group' ] ] ) ) {
-			unset( $this->termcaps->groups[ $_GET[ 'group' ] ] );
+	public function delete_group () {
+
+		if ( null !== $this->termcaps->get_group( $_GET[ 'group' ] ) ) {
+			$this->termcaps->remove_group( $_GET[ 'group' ] );
 		}
 
 		$this->termcaps->save();
@@ -397,6 +399,8 @@ class Term_Capabilities_Admin {
 	 */
 	public function add_meta_boxes ( $post_type, $post ) {
 
+		// ToDo: FixMe
+
 		// Nothing to do if the current user isn't covered
 		if ( !$this->termcaps->is_current_user_covered() ) {
 			return;
@@ -420,10 +424,14 @@ class Term_Capabilities_Admin {
 			}
 			$new_tax_meta_box_id = 'term-caps-' . $tax_meta_box_id;
 
-			remove_meta_box( $tax_meta_box_id, $post_type, 'side' );
+			// ToDo: leaving the original metabox in now for debugging
+			//remove_meta_box( $tax_meta_box_id, $post_type, 'side' );
 
-			// Build the list of allowed terms for this taxonomy
+			// Run through the list of all allowed terms and grab the ones for this taxonomy
 			$allowed_tax_terms = array();
+
+			// ToDo: FixMe on this whole section
+			/*
 			foreach ( $this->termcaps->allowed_terms as $this_term_id ) {
 
 				// Is this allowed term in the target category?
@@ -440,6 +448,7 @@ class Term_Capabilities_Admin {
 					'term_caps_render_meta_box'
 				), null, 'side', 'core', array( 'allowed_tax_terms' => $allowed_tax_terms ) );
 			}
+			*/
 		}
 	}
 
@@ -449,8 +458,10 @@ class Term_Capabilities_Admin {
 	 */
 	public function term_caps_render_meta_box ( $post, $metabox ) {
 
-		$allowed_tax_terms = $metabox[ 'args' ][ 'allowed_tax_terms' ];
-		$tax_name = $allowed_tax_terms[ 0 ]->taxonomy;
+		// ToDo: FixMe
+
+		$allowed_tax_terms = $metabox[ 'args' ][ 'allowed_tax_terms' ]; // Array of term objects returned from get_term_by()
+		$tax_name = $allowed_tax_terms[ 0 ]->taxonomy; // Taxonomy name is in all the elements, just grab the first
 
 		$input_name = ( 'category' == $tax_name ) ? 'post_category[]' : "tax_input[$tax_name][]";
 		?>
@@ -468,5 +479,22 @@ class Term_Capabilities_Admin {
 			</ul>
 		</div>
 	<?php
+	}
+
+	/**
+	 *
+	 * @param int $post_id The ID of the post.
+	 */
+	public function save_post ( $post_id ) {
+
+		if ( !$this->termcaps->is_current_user_covered() ) {
+			return;
+		}
+
+		foreach ( $this->termcaps->managed_taxonomies as $tax_name => $allowed_term_ids ) {
+			$saved_terms = wp_get_object_terms( $post_id, $tax_name, array( 'fields' => 'ids' ) );
+			$terms_to_save = array_intersect( array_map( 'absint', $saved_terms ), $allowed_term_ids );
+			wp_set_object_terms( $post_id, $terms_to_save, $tax_name );
+		}
 	}
 }

@@ -24,9 +24,9 @@ class TermCaps {
 	private $covered = false;
 
 	/**
-	 * @var int[] $allowed_terms Array of term IDs the current user can utilize, if covered
+	 * @var array $managed_taxonomies Covered for the current user. Format: 'taxonomy' => (term, term, term), ...
 	 */
-	public $allowed_terms = array();
+	public $managed_taxonomies = array();
 
 	/**
 	 * @param string $title Descriptive tile
@@ -79,25 +79,6 @@ class TermCaps {
 	}
 
 	/**
-	 * @return string[] Array of all allowed taxonomies across all groups
-	 */
-	public function get_managed_taxonomies () {
-		$managed_taxonomies = array();
-
-		foreach ( $this->groups as $this_group ) {
-
-			// Is the current user covered under this group?
-			if ( $this_group->is_user_covered() ) {
-				foreach ( $this_group->taxonomies as $this_tax ) {
-					$managed_taxonomies[ ] = $this_tax->taxonomy_name;
-				}
-			}
-		}
-
-		return array_unique( $managed_taxonomies );
-	}
-
-	/**
 	 * @return bool Whether or not the current user is covered under any group restriction rules
 	 */
 	public function is_current_user_covered () {
@@ -140,14 +121,23 @@ class TermCaps {
 			if ( $this_group->is_user_covered() ) {
 				$this->covered = true; // Flag the current user as being under coverage
 
-				// Add all allowed term IDs for this group
-				foreach ( $this_group->taxonomies as $this_tax_obj ) {
-					$this->allowed_terms = array_merge( $this->allowed_terms, $this_tax_obj->get_allowed_term_ids() );
+				// Store all managed tax/term information
+				foreach ( $this_group->taxonomies as $this_tax ) {
+
+					$tax_name = $this_tax->taxonomy_name;
+					$new_terms = $this_tax->get_allowed_term_ids();
+
+					// Have we added this taxonomy yet?
+					if ( array_key_exists( $tax_name, $this->managed_taxonomies ) ) {
+						// Append any new unique terms to the taxonomy
+						$this->managed_taxonomies[ $tax_name ] = array_unique( array_merge( $this->managed_taxonomies[ $tax_name ], $new_terms ) );
+					}
+					// A taxonomy we haven't seen before
+					else {
+						$this->managed_taxonomies[ $tax_name ] = $new_terms;
+					}
 				}
 			}
 		}
-
-		// Normalize the list of allowed term IDs
-		$this->allowed_terms = array_unique( $this->allowed_terms );
 	}
 }
