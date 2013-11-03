@@ -168,16 +168,16 @@ class Term_Capabilities_Admin {
 
 		// ToDo: Testing only
 		add_options_page(
-			__( 'PG Test', $this->plugin_slug ),
-			__( 'PG Test', $this->plugin_slug ),
+			__( 'Termcap Debug', $this->plugin_slug ),
+			__( 'Termcap Debug', $this->plugin_slug ),
 			'manage_options',
 			'xyzzy',
-			array( $this, 'pg_test' )
+			array( $this, 'termcap_debug_menu' )
 		);
 	}
 
 	// ToDo: Testing only
-	public function pg_test () {
+	public function termcap_debug_menu () {
 		echo "<pre>" . print_r( $this->termcaps, true ) . "</pre>";
 	}
 
@@ -393,8 +393,7 @@ class Term_Capabilities_Admin {
 			$new_tax_meta_box_id = 'term-caps-' . $tax_meta_box_id;
 
 			// Replace the stock metabox with our own
-			// ToDo: leaving the original metabox in now for debugging
-			//remove_meta_box( $tax_meta_box_id, $post_type, 'side' );
+			remove_meta_box( $tax_meta_box_id, $post_type, 'side' );
 			add_meta_box(
 				$new_tax_meta_box_id,
 				$taxonomy->labels->name,
@@ -415,27 +414,162 @@ class Term_Capabilities_Admin {
 	 */
 	public function term_caps_render_meta_box ( $post, $metabox ) {
 
-		// ToDo: FixMe from WordPress core example
 		$tax_name = $metabox[ 'args' ][ 'tax_name' ];
+		$tax = get_taxonomy( $tax_name );
 		$term_ids = $this->termcaps->get_allowed_term_ids( $tax_name );
-
-		$input_name = ( 'category' == $tax_name ) ? 'post_category[]' : "tax_input[$tax_name][]";
 		?>
-		<div id="term-caps-taxonomy-category" class="categorydiv">
-			<input type="hidden" name="<?php echo $input_name; ?>" value="0" />
-			<ul id="categorychecklist" data-wp-lists="list:category" class="categorychecklist form-no-clear">
-
-				<?php foreach ( $term_ids as $this_term_id ) { ?>
-					<?php $term_name = get_term_by( 'id', $this_term_id, $tax_name )->name; ?>
-					<li id="category-<?php echo $this_term_id; ?>">
-						<label class="selectit">
-							<input value="<?php echo $this_term_id; ?>" type="checkbox" name="<?php echo $input_name; ?>" id="in-category-<?php echo $this_term_id; ?>"> <?php echo $term_name; ?>
-						</label>
-					</li>
-				<?php } ?>
+		<div id="taxonomy-<?php echo $tax_name; ?>" class="categorydiv">
+			<ul id="<?php echo $tax_name; ?>-tabs" class="category-tabs">
+				<li class="tabs"><a href="#<?php echo $tax_name; ?>-all"><?php echo $tax->labels->all_items; ?></a></li>
+				<li class="hide-if-no-js"><a href="#<?php echo $tax_name; ?>-pop"><?php _e( 'Most Used' ); ?></a></li>
 			</ul>
+
+			<div id="<?php echo $tax_name; ?>-pop" class="tabs-panel" style="display: none;">
+				<ul id="<?php echo $tax_name; ?>checklist-pop" class="categorychecklist form-no-clear">
+					<?php $popular_ids = $this->term_caps_popular_terms_checklist( $tax_name ); ?>
+				</ul>
+			</div>
+
+			<div id="<?php echo $tax_name; ?>-all" class="tabs-panel">
+				<?php
+				$name = ( $tax_name == 'category' ) ? 'post_category' : 'tax_input[' . $tax_name . ']';
+				echo "<input type='hidden' name='{$name}[]' value='0' />"; // Allows for an empty term set to be sent. 0 is an invalid Term ID and will be ignored by empty() checks.
+				?>
+				<ul id="<?php echo $tax_name; ?>checklist" data-wp-lists="list:<?php echo $tax_name ?>" class="categorychecklist form-no-clear">
+					<?php
+					$this->term_caps_metabox_checklist( $post->ID, array(
+						'taxonomy' => $tax_name,
+						'popular_cats' => $popular_ids
+					) );
+					?>
+				</ul>
+			</div>
 		</div>
 	<?php
+	}
+
+	/**
+	 * @param string $tax_name Taxonomy to retrieve terms from.
+	 * @param int $default Unused.
+	 * @param int $number Number of terms to retrieve. Defaults to 10.
+	 * @param bool $echo Optionally output the list as well. Defaults to true.
+	 *
+	 * @return array List of popular term IDs.
+	 */
+	function term_caps_popular_terms_checklist ( $tax_name, $default = 0, $number = 10, $echo = true ) {
+		$post = get_post();
+
+		if ( $post && $post->ID ) {
+			$checked_terms = wp_get_object_terms( $post->ID, $tax_name, array( 'fields' => 'ids' ) );
+		}
+		else {
+			$checked_terms = array();
+		}
+
+		$terms = get_terms( $tax_name, array(
+			'orderby' => 'count',
+			'include' => $this->termcaps->get_allowed_term_ids( $tax_name ),
+			'order' => 'DESC',
+			'number' => $number,
+			'hierarchical' => false
+		) );
+
+		$tax = get_taxonomy( $tax_name );
+
+		$popular_ids = array();
+		foreach ( (array) $terms as $term ) {
+			$popular_ids[ ] = $term->term_id;
+			if ( !$echo ) { // hack for AJAX use
+				continue;
+			}
+			$id = "popular-$tax_name-$term->term_id";
+			$checked = in_array( $term->term_id, $checked_terms ) ? 'checked="checked"' : '';
+			?>
+
+			<li id="<?php echo $id; ?>" class="popular-category">
+				<label class="selectit">
+					<input id="in-<?php echo $id; ?>" type="checkbox" <?php echo $checked; ?> value="<?php echo (int) $term->term_id; ?>" <?php disabled( !current_user_can( $tax->cap->assign_terms ) ); ?> />
+					<?php echo esc_html( apply_filters( 'the_category', $term->name ) ); ?>
+				</label>
+			</li>
+
+		<?php
+		}
+		return $popular_ids;
+	}
+
+	/**
+	 * @param int $post_id
+	 * @param array $args
+	 */
+	public function term_caps_metabox_checklist ( $post_id = 0, $args = array() ) {
+		$defaults = array(
+			'descendants_and_self' => 0,
+			'selected_cats' => false,
+			'popular_cats' => false,
+			'walker' => null,
+			'taxonomy' => 'category',
+			'checked_ontop' => true
+		);
+		$args = apply_filters( 'wp_terms_checklist_args', $args, $post_id );
+
+		extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
+
+		$walker = new Walker_Category_Checklist;
+
+		$descendants_and_self = (int) $descendants_and_self; // 0
+
+		$args = array( 'taxonomy' => $taxonomy );
+
+		$tax = get_taxonomy( $taxonomy );
+		$args[ 'disabled' ] = !current_user_can( $tax->cap->assign_terms );
+
+		if ( is_array( $selected_cats ) ) {
+			$args[ 'selected_cats' ] = $selected_cats;
+		}
+		elseif ( $post_id ) {
+			$args[ 'selected_cats' ] = wp_get_object_terms( $post_id, $taxonomy, array_merge( $args, array( 'fields' => 'ids' ) ) );
+		}
+		else {
+			$args[ 'selected_cats' ] = array();
+		}
+
+		if ( is_array( $popular_cats ) ) {
+			$args[ 'popular_cats' ] = $popular_cats;
+		}
+
+		// ToDo: look into this one
+		if ( $descendants_and_self ) {
+			$categories = (array) get_terms( $taxonomy, array(
+				'child_of' => $descendants_and_self,
+				'hierarchical' => 0,
+				'hide_empty' => 0
+			) );
+			$self = get_term( $descendants_and_self, $taxonomy );
+			array_unshift( $categories, $self );
+		}
+
+		else {
+			$categories = (array) get_terms( $taxonomy, array( 'include' => $this->termcaps->get_allowed_term_ids( $taxonomy ) ) );
+		}
+
+		if ( $checked_ontop ) {
+			// Post process $categories rather than adding an exclude to the get_terms() query to keep the query the same across all posts (for any query cache)
+			$checked_categories = array();
+			$keys = array_keys( $categories );
+
+			foreach ( $keys as $k ) {
+				if ( in_array( $categories[ $k ]->term_id, $args[ 'selected_cats' ] ) ) {
+					$checked_categories[ ] = $categories[ $k ];
+					unset( $categories[ $k ] );
+				}
+			}
+
+			// Put checked cats on top
+			echo call_user_func_array( array( &$walker, 'walk' ), array( $checked_categories, 0, $args ) );
+		}
+		// Then the rest of them
+		echo call_user_func_array( array( &$walker, 'walk' ), array( $categories, 0, $args ) );
 	}
 
 	/**
