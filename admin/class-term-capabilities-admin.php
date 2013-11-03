@@ -75,9 +75,10 @@ class Term_Capabilities_Admin {
 		// Hook into the metabox display machinery
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ), 10, 2 );
 
-		// Hook into the post save mechanism to remove disallowed terms
-		add_action( 'save_post', array( $this, 'save_post' ) );
+		// Called whenever a term relationship is added to a post object
+		add_action( 'added_term_relationship', array( $this, 'added_term_relationship' ), 10, 2 );
 
+		// Setup the global TermCaps object
 		add_action( 'wp_loaded', array( $this, 'init_termcaps_object' ) );
 	}
 
@@ -513,6 +514,16 @@ class Term_Capabilities_Admin {
 		);
 		$args = apply_filters( 'wp_terms_checklist_args', $args, $post_id );
 
+		/**
+		 * Extracting variables via args like this sucks for the IDE, but we can
+		 * suppress undefined variable notices, at least.
+		 *
+		 * @var $descendants_and_self
+		 * @var string $taxonomy The taxonomy name
+		 * @var $selected_cats
+		 * @var int[] $popular_cats Array of popular category IDs
+		 * @var $checked_ontop
+		 */
 		extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 
 		$walker = new Walker_Category_Checklist;
@@ -594,6 +605,22 @@ class Term_Capabilities_Admin {
 			// Remove any disallowed terms from the list and save
 			$terms_to_save = array_intersect( $saved_terms, $termcaps->get_allowed_term_ids( $tax_name ) );
 			wp_set_object_terms( $post_id, $terms_to_save, $tax_name );
+		}
+	}
+
+	/**
+	 * @param int $object_id Post object ID
+	 * @param int $tt_id term_taxonomy_id used in the newly added term relationship
+	 */
+	public function added_term_relationship ( $object_id, $tt_id ) {
+		global $wpdb;
+
+		// Lookup the term ID and taxonomy name used in the newly added term relationship
+		list ( $new_term_id, $tax_name ) = $wpdb->get_row( "SELECT tt.term_id, tt.taxonomy FROM $wpdb->term_taxonomy AS tt WHERE tt.term_taxonomy_id = $tt_id", ARRAY_N );
+
+		// Remove the newly added term relationship if the term ID isn't allowed
+		if ( !in_array( $new_term_id, $this->termcaps->get_allowed_term_ids( $tax_name ) ) ) {
+			wp_remove_object_terms( $object_id, (int) $new_term_id, $tax_name );
 		}
 	}
 }
