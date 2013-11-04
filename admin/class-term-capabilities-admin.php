@@ -5,7 +5,7 @@ require_once( 'classes/term-caps.php' ); // Other dependency classes will get lo
  * Plugin Name.
  *
  * @package   Term_Capabilities_Admin
- * @author    Scott Kingsley Clark, Phil Lewis <lol@scottkclark.com>
+ * @author    Phil Lewis, Scott Kingsley Clark <lol@scottkclark.com>
  * @license   GPL-2.0+
  * @link      https://github.com/sc0ttkclark/term-capabilities
  * @copyright 2013 Scott Kingsley Clark, Phil Lewis
@@ -19,7 +19,7 @@ require_once( 'classes/term-caps.php' ); // Other dependency classes will get lo
  * functionality, then refer to `class-term-capabilities.php`
  *
  * @package Term_Capabilities_Admin
- * @author  Scott Kingsley Clark, Phil Lewis <lol@scottkclark.com>
+ * @author  Phil Lewis, Scott Kingsley Clark <lol@scottkclark.com>
  */
 class Term_Capabilities_Admin {
 

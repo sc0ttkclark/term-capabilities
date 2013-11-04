@@ -6,7 +6,7 @@
  * also follow WordPress Coding Standards and PHP best practices.
  *
  * @package   Term_Capabilities
- * @author    Scott Kingsley Clark, Phil Lewis <lol@scottkclark.com>
+ * @author    Phil Lewis, Scott Kingsley Clark <lol@scottkclark.com>
  * @license   GPL-2.0+
  * @link      https://github.com/sc0ttkclark/term-capabilities
  * @copyright 2013 Scott Kingsley Clark, Phil Lewis
@@ -16,7 +16,7 @@
  * Plugin URI:        https://github.com/sc0ttkclark/term-capabilities
  * Description:       Limit access to certain terms in the post editor, per capability or role
  * Version:           1.0.0
- * Author:            Scott Kingsley Clark and Phil Lewis
+ * Author:            Phil Lewis and Scott Kingsley Clark
  * Author URI:        https://github.com/sc0ttkclark/term-capabilities
  * Text Domain:       term-capabilities
  * License:           GPL-2.0+

@@ -1,5 +1,5 @@
 === Term Capabilities ===
-Contributors: sc0ttkclark, pglewis
+Contributors: pglewis, sc0ttkclark
 Donate link: http://podsfoundation.org/donate/
 Tags: terms, capabilties, roles, access
 Requires at least: 3.7
