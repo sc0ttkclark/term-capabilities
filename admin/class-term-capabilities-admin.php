@@ -1,5 +1,5 @@
 <?php
-require_once( 'classes/term-caps.php' ); // Other dependency classes will get loaded
+require_once( 'classes/termcaps.php' ); // Other dependency classes will get loaded
 
 /**
  * Plugin Name.
@@ -332,6 +332,7 @@ class Term_Capabilities_Admin {
 	 * @since    1.0.0
 	 */
 	public function display_plugin_admin_page () {
+		/** @noinspection PhpUnusedLocalVariableInspection */
 		$termcaps = $this->termcaps; // Used by the views
 
 		if ( isset( $_GET[ 'action' ] ) && 'add' == $_GET[ 'action' ] ) {
@@ -417,7 +418,6 @@ class Term_Capabilities_Admin {
 
 		$tax_name = $metabox[ 'args' ][ 'tax_name' ];
 		$tax = get_taxonomy( $tax_name );
-		$term_ids = $this->termcaps->get_allowed_term_ids( $tax_name );
 		?>
 		<div id="taxonomy-<?php echo $tax_name; ?>" class="categorydiv">
 			<ul id="<?php echo $tax_name; ?>-tabs" class="category-tabs">
@@ -458,6 +458,9 @@ class Term_Capabilities_Admin {
 	 * @return array List of popular term IDs.
 	 */
 	function term_caps_popular_terms_checklist ( $tax_name, $default = 0, $number = 10, $echo = true ) {
+		/** @noinspection PhpExpressionResultUnusedInspection */
+		$default; // Harmless use of unused param to suppress unused param notice in the IDE
+
 		$post = get_post();
 
 		if ( $post && $post->ID ) {
@@ -504,6 +507,16 @@ class Term_Capabilities_Admin {
 	 * @param array $args
 	 */
 	public function term_caps_metabox_checklist ( $post_id = 0, $args = array() ) {
+		/**
+		 * Suppress undefined variable notices in the IDE caused by using extract()
+		 *
+		 * @var int $descendants_and_self (treated as a boolean)
+		 * @var bool|int[] $selected_cats
+		 * @var bool|int[] $popular_cats Array of popular category IDs
+		 * @var null|Walker $walker
+		 * @var string $taxonomy The taxonomy name
+		 * @var bool $checked_ontop
+		 */
 		$defaults = array(
 			'descendants_and_self' => 0,
 			'selected_cats' => false,
@@ -514,21 +527,13 @@ class Term_Capabilities_Admin {
 		);
 		$args = apply_filters( 'wp_terms_checklist_args', $args, $post_id );
 
-		/**
-		 * Extracting variables via args like this sucks for the IDE, but we can
-		 * suppress undefined variable notices, at least.
-		 *
-		 * @var $descendants_and_self
-		 * @var string $taxonomy The taxonomy name
-		 * @var $selected_cats
-		 * @var int[] $popular_cats Array of popular category IDs
-		 * @var $checked_ontop
-		 */
 		extract( wp_parse_args( $args, $defaults ), EXTR_SKIP );
 
-		$walker = new Walker_Category_Checklist;
+		if ( empty( $walker ) || !is_a( $walker, 'Walker' ) ) {
+			$walker = new Walker_Category_Checklist;
+		}
 
-		$descendants_and_self = (int) $descendants_and_self; // 0
+		$descendants_and_self = (int) $descendants_and_self;
 
 		$args = array( 'taxonomy' => $taxonomy );
 
@@ -545,9 +550,7 @@ class Term_Capabilities_Admin {
 			$args[ 'selected_cats' ] = array();
 		}
 
-		if ( is_array( $popular_cats ) ) {
-			$args[ 'popular_cats' ] = $popular_cats;
-		}
+		$args[ 'popular_cats' ] = $popular_cats;
 
 		// ToDo: look into this one
 		if ( $descendants_and_self ) {
@@ -559,7 +562,6 @@ class Term_Capabilities_Admin {
 			$self = get_term( $descendants_and_self, $taxonomy );
 			array_unshift( $categories, $self );
 		}
-
 		else {
 			$categories = (array) get_terms( $taxonomy, array( 'include' => $this->termcaps->get_allowed_term_ids( $taxonomy ) ) );
 		}
@@ -584,10 +586,11 @@ class Term_Capabilities_Admin {
 	}
 
 	/**
-	 *
-	 * @param int $post_id The ID of the post.
+	 * @param int $object_id Post object ID
+	 * @param int $tt_id term_taxonomy_id used in the newly added term relationship
 	 */
-	public function save_post ( $post_id ) {
+	public function added_term_relationship ( $object_id, $tt_id ) {
+		global $wpdb;
 		$termcaps = $this->termcaps;
 
 		// Nothing to do if the current user isn't under any coverage
@@ -595,31 +598,11 @@ class Term_Capabilities_Admin {
 			return;
 		}
 
-		// Loop through all the managed taxonomies
-		foreach ( $termcaps->get_managed_taxonomies() as $tax_name ) {
-
-			// Get the terms saved on this post for this taxonomy
-			$saved_terms = wp_get_object_terms( $post_id, $tax_name, array( 'fields' => 'ids' ) );
-			$saved_terms = array_map( 'absint', $saved_terms ); // Cast all the term IDs to int for array_intersect()
-
-			// Remove any disallowed terms from the list and save
-			$terms_to_save = array_intersect( $saved_terms, $termcaps->get_allowed_term_ids( $tax_name ) );
-			wp_set_object_terms( $post_id, $terms_to_save, $tax_name );
-		}
-	}
-
-	/**
-	 * @param int $object_id Post object ID
-	 * @param int $tt_id term_taxonomy_id used in the newly added term relationship
-	 */
-	public function added_term_relationship ( $object_id, $tt_id ) {
-		global $wpdb;
-
 		// Lookup the term ID and taxonomy name used in the newly added term relationship
 		list ( $new_term_id, $tax_name ) = $wpdb->get_row( "SELECT tt.term_id, tt.taxonomy FROM $wpdb->term_taxonomy AS tt WHERE tt.term_taxonomy_id = $tt_id", ARRAY_N );
 
 		// Remove the newly added term relationship if the term ID isn't allowed
-		if ( !in_array( $new_term_id, $this->termcaps->get_allowed_term_ids( $tax_name ) ) ) {
+		if ( !in_array( $new_term_id, $termcaps->get_allowed_term_ids( $tax_name ) ) ) {
 			wp_remove_object_terms( $object_id, (int) $new_term_id, $tax_name );
 		}
 	}

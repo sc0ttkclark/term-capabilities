@@ -282,13 +282,6 @@ class TermCapsGroup {
 	}
 
 	/**
-	 * @return TermCapsTaxonomy[]
-	 */
-	public function get_taxonomies() {
-		return $this->taxonomies;
-	}
-
-	/**
 	 * @param string $taxonomy_name
 	 */
 	public function remove_taxonomy( $taxonomy_name ) {
@@ -297,6 +290,20 @@ class TermCapsGroup {
 				array_splice( $this->taxonomies, $i, 1 );
 			}
 		}
+	}
+
+	/**
+	 * @return TermCapsTaxonomy[]
+	 */
+	public function get_taxonomies() {
+		return $this->taxonomies;
+	}
+
+	/**
+	 * Remove all existing taxonomies and reset to an empty array
+	 */
+	public function clear_taxonomies() {
+		$this->taxonomies = array();
 	}
 
 	/**
