@@ -590,7 +590,6 @@ class Term_Capabilities_Admin {
 	 * @param int $tt_id term_taxonomy_id used in the newly added term relationship
 	 */
 	public function added_term_relationship ( $object_id, $tt_id ) {
-
 		/** @global wpdb $wpdb */
 		global $wpdb;
 		$termcaps = $this->termcaps;
